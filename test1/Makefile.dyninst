@@ -1,0 +1,25 @@
+BOOST_INCLUDE=-I$(BOOST_ROOT)/include 
+BOOST_LIBS=-Wl,-rpath=$(BOOST_ROOT)/lib
+
+DYNINST_INCLUDE=-I$(DYNINST_ROOT)/include 
+DYNINST_LIBS= \
+	-L$(DYNINST_ROOT)/lib -Wl,-rpath,$(DYNINST_ROOT)/lib \
+	-lsymtabAPI \
+	-lparseAPI \
+	-linstructionAPI 
+
+MALLOC_DIR=`dirname ${MALLOC_LIB}`
+MALLOC_LIBRARY=`basename ${MALLOC_LIB}`
+	
+
+INCLUDES= \
+	$(BOOST_INCLUDE) \
+	$(DYNINST_INCLUDE)
+
+LIBS= \
+	$(DYNINST_LIBS) \
+	$(BOOST_LIBS) \
+	$(MALLOC_LIBS)
+
+$(TARGET): $(TARGET).cpp
+	icpc -g $(PMODEL_OPT) -std=c++11 $(INCLUDES) stefan.o -o $@ $< $(LIBS)

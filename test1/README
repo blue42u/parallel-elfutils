@@ -1,0 +1,33 @@
+build the test program cilk-parse
+
+make 
+
+test the program with the cilk race detector
+
+make check
+
+---------------
+cilk-parse test
+---------------
+
+This test is a proxy for hpcstruct with cilk threads.  It iterates
+through the same hierarchy of functions, loops, blocks, instructions,
+inline call sequences and line map info, and makes the same queries
+that hpcstruct would make.
+
+This program tests that we can make parallel queries to ParseAPI and
+SymtabAPI.  For now, we parse the entire binary sequentially and then
+use cilk_for to analyze the functions in parallel.
+
+Build the cilk-parse test with the '-fcilkplus' option.  Be sure the
+C++ compiler supports cilk, for example, gnu g++ 5.x or later.
+
+./mk-dyninst.sh -fcilkplus cilk-parse.cpp /externals/dir
+
+Run the test with two arguments: the binary file to analyze and
+(optionally) the number of threads.  
+
+./cilk-plus filename [num-threads]
+
+If num-threads is not specified, the program will try the
+CILK_NWORKERS environment variable.
