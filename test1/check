@@ -1,5 +1,4 @@
 #!/bin/bash
 echo "running: cilkscreen ./cilk-parse ./cilk-parse > typescript.`date` 2>&1"
 module load icc/2018.2.199-GCC-6.4.0
-export PATH=../pkgs/cilktools/bin:$PATH
-cilkscreen ./cilk-parse ./cilk-parse > "typescript.`date`" 2>&1 
+../pkgs/cilktools/bin/cilkscreen ./cilk-parse ./cilk-parse > "typescript.`date`" 2>&1 
