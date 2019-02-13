@@ -1,4 +1,5 @@
 set up your environment
+
 	source scripts/environment.sh
 
 download and build everything, including a test harness for detecting
