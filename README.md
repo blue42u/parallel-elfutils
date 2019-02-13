@@ -19,10 +19,12 @@ to the dyninst-build target. I had some problems adding parallelism for the firs
 note: the makefile in the test1 directory is crude. it will not rebuild 
 the binary for cilk-parse if one of the libraries (e.g., dyninst symtabAPI or
 libdw) has changed. you can rebuild cilk-parse easily with
+
 	make clean
 	make
 
 and then retest with
+
 	make check 
 	 
 for historical reasons, the test1 directory has three interacting
