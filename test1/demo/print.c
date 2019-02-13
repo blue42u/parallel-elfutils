@@ -1,5 +1,6 @@
 #include <stdio.h>
-void stefan()
+
+void print()
 {
 	printf("hello\n");
 }
