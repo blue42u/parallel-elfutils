@@ -3,7 +3,7 @@ wget http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.zi
 popd
 unzip tar/boost_1_61_0.zip
 cd boost_1_61_0
-./bootstrap.sh
+./bootstrap.sh --with-toolset=intel
 ./b2 \
 	--with-system \
 	--with-thread \

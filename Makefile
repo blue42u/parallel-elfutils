@@ -37,6 +37,9 @@ dyninst-config:
 dyninst-build:
 	make -C dyninst/dyninst-build install
 
+dyninst-remove:
+	scripts/dyninst-remove.sh
+
 #----------------------------------------------------------------------------
 # boost
 #----------------------------------------------------------------------------
@@ -70,3 +73,5 @@ elfutils-remove:
 
 distclean:
 	scripts/cilktools-uninstall.sh 
+	/bin/rm -rf boost_1_61_0
+	/bin/rm -rf pkgs

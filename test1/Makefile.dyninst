@@ -22,4 +22,4 @@ LIBS= \
 	$(MALLOC_LIBS)
 
 $(TARGET): $(TARGET).cpp
-	icpc -O0 -g $(PMODEL_OPT) -std=c++11 $(INCLUDES) stefan.o -o $@ $< $(LIBS)
+	icpc -O0 -g $(PMODEL_OPT) -std=c++11 $(INCLUDES) -o $@ $< $(LIBS)
