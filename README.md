@@ -1,3 +1,8 @@
+Before you try to clone the repository
+
+	module load GCCcore/6.4.0
+	module load Git/2.17.1
+
 set up your environment
 
 	source scripts/environment.sh
