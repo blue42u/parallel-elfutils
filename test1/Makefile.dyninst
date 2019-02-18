@@ -3,7 +3,7 @@ BOOST_LIBS=-Wl,-rpath=$(BOOST_ROOT)/lib
 
 DYNINST_INCLUDE=-I$(DYNINST_ROOT)/include 
 DYNINST_LIBS= \
-	-L$(DYNINST_ROOT)/lib -Wl,-rpath,$(DYNINST_ROOT)/lib \
+	-L$(DYNINST_ROOT)/lib -Wl,-rpath=$(DYNINST_ROOT)/lib \
 	-lsymtabAPI \
 	-lparseAPI \
 	-linstructionAPI 
