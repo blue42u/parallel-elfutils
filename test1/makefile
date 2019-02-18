@@ -8,7 +8,7 @@ TARGET=cilk-parse
 PMODEL_OPT="-g "
 
 
-build: stefan.o $(TARGET) 
+build: $(TARGET) 
 
 $(TARGET): ../elfutils/elfutils-install/lib/libdw.so ../dyninst/dyninst-install/lib/libsymtabAPI.so
 	make -f Makefile.dyninst BOOST_ROOT=$(BOOST_ROOT) DYNINST_ROOT=$(DYNINST_ROOT) TARGET=$(TARGET) PMODEL_OPT=$(PMODEL_OPT)
