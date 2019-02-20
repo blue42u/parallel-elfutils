@@ -2,9 +2,9 @@
 # get everything downloaded and built for the first time
 #----------------------------------------------------------------------------
 
-all: download build test1-build
+all: download build check
 
-build: elfutils-build dyninst-config dyninst-build test1-build
+build: elfutils-build dyninst-build test1-build
 
 #----------------------------------------------------------------------------
 # download valgrind, elfutils, boost, and dyninst
@@ -14,58 +14,101 @@ build: elfutils-build dyninst-config dyninst-build test1-build
 #   understand what you are doing before running this again
 #----------------------------------------------------------------------------
 
-download: boost-install valgrind-install elfutils-download dyninst-download
-	touch download
+INST = $(shell pwd)/install
+
+download: boost valgrind elfutils dyninst
 
 #----------------------------------------------------------------------------
 # dyninst test harness for detecting races caused by libdw in elfutils
 #----------------------------------------------------------------------------
 
-test1-build: 
-	make -C test1
+test1-build: dyninst-build
+	$(MAKE) -j -C test1
+
+check:
+	$(MAKE) -j -C test1 check
 
 #----------------------------------------------------------------------------
 # dyninst
 #----------------------------------------------------------------------------
 
-dyninst-download:
+dyninst:
 	git submodule update --init dyninst
 
-dyninst-config:
-	scripts/dyninst-config.sh
-	touch dyninst-config
-
-dyninst-build:
-	make -j -C dyninst/dyninst-build install
+dyninst-build: boost dyninst
+	@mkdir -p build/dyninst install/
+	@cd build/dyninst && if [ ! -e Makefile ]; then cmake \
+	        -DPATH_BOOST=$(INST) \
+		-DCMAKE_INSTALL_PREFIX=$(INST) \
+		-DCMAKE_CXX_FLAGS="-DENABLE_VG_ANNOTATIONS -I$(INST)" \
+		-DLIBELF_INCLUDE_DIR=$(INST)/include \
+		-DLIBELF_LIBRARIES=$(INST)/lib/libelf.so \
+		-DLIBDWARF_INCLUDE_DIR=$(INST)/include \
+		-DLIBDWARF_LIBRARIES=$(INST)/lib/libdw.so \
+		-DCMAKE_C_COMPILER=`which icc` \
+		-DCMAKE_BUILD_TYPE=Debug \
+		-DCMAKE_CXX_COMPILER=`which icpc` \
+		../../dyninst; fi
+	$(MAKE) -j -C build/dyninst install
 
 #----------------------------------------------------------------------------
 # boost
 #----------------------------------------------------------------------------
 
-boost-install:
-	scripts/boost-install.sh
+boost:
+	@mkdir -p install/ download/
+	cd download && wget --no-check-certificate -N http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.zip
+	unzip -qo download/boost_1_61_0.zip
+	mv boost_1_61_0 boost
+	cd boost && ./bootstrap.sh --with-toolset=intel-linux
+	cd boost && ./b2 \
+		--with-system \
+		--with-thread \
+		--with-date_time \
+		--with-filesystem \
+		--with-timer \
+		--with-atomic \
+		--ignore-site-config \
+		--link=static \
+		--runtime-link=shared \
+		--layout=tagged \
+		--threading=multi \
+		--prefix=../install -j 16 install
 
 #----------------------------------------------------------------------------
 # valgrind
 #----------------------------------------------------------------------------
 
-valgrind-install:
-	scripts/valgrind-install.sh 
+valgrind: boost
+	@mkdir -p install/ download/
+	cd download && wget -N http://www.valgrind.org/downloads/valgrind-3.14.0.tar.bz2
+	tar xjf download/valgrind-3.14.0.tar.bz2
+	mv valgrind-3.14.0 valgrind
+	cd valgrind && CPPFLAGS="-I$(INST)/include -L$(INST)/lib" \
+		./configure --prefix=$(INST)
+	cd valgrind && $(MAKE) -j install
 
 #----------------------------------------------------------------------------
 # elfutils
 #----------------------------------------------------------------------------
 
-elfutils-download:
-	git submodule update --init dyninst
+elfutils:
+	git submodule update --init elfutils
+	cd elfutils && autoreconf -i -f
 
-elfutils-build:
-	make -j -C elfutils/elfutils-build install
+elfutils-build: elfutils
+	@mkdir -p build/elfutils
+	@cd build/elfutils && if [ ! -e Makefile ]; then \
+		../../elfutils/configure \
+			--enable-maintainer-mode \
+			--prefix=$(INST) \
+			CFLAGS="-g -O0"; fi
+	$(MAKE) -j -C build/elfutils install
 
 #----------------------------------------------------------------------------
 # maintenance
 #----------------------------------------------------------------------------
 
 distclean:
-	/bin/rm -rf boost_1_61_0
-	/bin/rm -rf pkgs
+	rm -rf boost
+	rm -rf valgrind

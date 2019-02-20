@@ -45,6 +45,19 @@
 }
 
 {
+  libomp: thread cleanup
+  Helgrind:Race
+  ...
+  fun:__kmp_suspend_uninitialize_thread
+}
+{
+  libomp: thread cleanup
+  drd:ConflictingAccess
+  ...
+  fun:__kmp_suspend_uninitialize_thread
+}
+
+{
   tbb::concurrent_hash_map
   Helgrind:Race
   ...

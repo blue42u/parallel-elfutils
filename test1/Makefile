@@ -1,35 +1,18 @@
-ifndef BOOST_ROOT
-ext_error1:
-	@echo "usage: make BOOST_ROOT=</path/to/boost/install> ..."
-endif
+WORK=$(shell pwd)/..
+INSTALL=$(WORK)/install
 
-ifndef DYNINST_ROOT
-ext_error2:
-	@echo "usage: make DYNINST_ROOT=</path/to/dyninst/install> ..."
-endif
+CFLAGS=-O0 -g
 
-ifndef TARGET
-ext_error3:
-	@echo "usage: make TARGET=<targetname> ..."
-endif
+cilk-parse: cilk-parse.cpp
+	icpc $(CFLAGS) -std=c++11 -I$(INSTALL)/include -o $@ $< \
+		-L$(INSTALL)/lib -Wl,-rpath=$(INSTALL)/lib \
+		-lsymtabAPI \
+		-lparseAPI \
+		-linstructionAPI
 
-ifndef PMODEL_OPT
-ext_error3:
-	@echo "usage: make PMODEL_OPT=<compiler opt for programming model> ..."
-endif
+.PHONY: check
+check: demo/demo
+	./check
 
-build: $(TARGET) 
-
-$(TARGET):
-	make -f Makefile.dyninst BOOST_ROOT=$(BOOST_ROOT) DYNINST_ROOT=$(DYNINST_ROOT) TARGET=$(TARGET) PMODEL_OPT=$(PMODEL_OPT)
-
-
-test: $(TARGET)
-	@for f in load-modules/*; do echo time ./$(TARGET) $$f; time ./$(TARGET) $$f; echo; done
-
-all: build test
-
-clean:
-	/bin/rm -f $(TARGET)
-
-
+demo/demo:
+	$(MAKE) -C demo

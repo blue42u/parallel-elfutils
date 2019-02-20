@@ -9,7 +9,7 @@ run() {
   shift 2
   echo "Running: $TOOL ./cilk-parse demo/demo &> errors.$DATE.$IDENT"
   valgrind \
-    --tool=$TOOL --suppressions=ignoring.supp \
+    --tool=$TOOL --suppressions=system.supp \
     --fair-sched=yes "$@" \
     ./cilk-parse demo/demo &> "errors.$DATE.$IDENT"
   OUTPUTS="$OUTPUTS errors.$DATE.$IDENT"

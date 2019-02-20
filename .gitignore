@@ -1,0 +1,5 @@
+boost/
+valgrind/
+build/
+install/
+download/
