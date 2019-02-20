@@ -17,4 +17,4 @@ run() {
 
 run helgrind hel
 run drd drd
-less $OUTPUTS
+less -S $OUTPUTS

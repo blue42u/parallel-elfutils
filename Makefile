@@ -15,7 +15,7 @@ build: elfutils-build dyninst-config dyninst-build test1-build
 #----------------------------------------------------------------------------
 
 download: boost-install valgrind-install elfutils-download dyninst-download
-	echo > download
+	touch download
 
 #----------------------------------------------------------------------------
 # dyninst test harness for detecting races caused by libdw in elfutils
@@ -49,7 +49,7 @@ boost-install:
 # valgrind
 #----------------------------------------------------------------------------
 
-valgrind-download:
+valgrind-install:
 	scripts/valgrind-install.sh 
 
 #----------------------------------------------------------------------------
