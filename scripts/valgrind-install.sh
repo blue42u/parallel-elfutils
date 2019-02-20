@@ -9,6 +9,8 @@ ln -s valgrind-3.14.0 valgrind
 pushd valgrind &> /dev/null
 mkdir -p valgrind-build valgrind-install
 pushd valgrind-build &> /dev/null
+BOOST=`pwd`/../../../boost_1_61_0/boost-install
+export CPPFLAGS="-I$BOOST/include -L$BOOST/lib"
 ../configure --prefix=`pwd`/../valgrind-install
 make -j install
 popd &> /dev/null

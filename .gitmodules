@@ -1,0 +1,6 @@
+[submodule "dyninst"]
+	path = dyninst
+	url = https://github.com/blue42u/dyninst.git
+[submodule "elfutils"]
+	path = elfutils
+	url = https://github.com/jmellorcrummey/elfutils.git

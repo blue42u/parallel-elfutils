@@ -14,7 +14,7 @@ build: elfutils-build dyninst-config dyninst-build test1-build
 #   understand what you are doing before running this again
 #----------------------------------------------------------------------------
 
-download: valgrind-download elfutils-download boost-install dyninst-download
+download: boost-install valgrind-install elfutils-download dyninst-download
 	echo > download
 
 #----------------------------------------------------------------------------
@@ -29,7 +29,7 @@ test1-build:
 #----------------------------------------------------------------------------
 
 dyninst-download:
-	scripts/dyninst-download.sh
+	git submodule update --init dyninst
 
 dyninst-config:
 	scripts/dyninst-config.sh
@@ -37,9 +37,6 @@ dyninst-config:
 
 dyninst-build:
 	make -j -C dyninst/dyninst-build install
-
-dyninst-remove:
-	scripts/dyninst-remove.sh
 
 #----------------------------------------------------------------------------
 # boost
@@ -60,19 +57,15 @@ valgrind-download:
 #----------------------------------------------------------------------------
 
 elfutils-download:
-	scripts/elfutils-download.sh
+	git submodule update --init dyninst
 
 elfutils-build:
 	make -j -C elfutils/elfutils-build install
-
-elfutils-remove:
-	/bin/rm -rf elfutils
 
 #----------------------------------------------------------------------------
 # maintenance
 #----------------------------------------------------------------------------
 
 distclean:
-	scripts/valgrind-uninstall.sh 
 	/bin/rm -rf boost_1_61_0
 	/bin/rm -rf pkgs
