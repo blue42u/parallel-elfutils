@@ -6,7 +6,10 @@ mkdir -p pkgs
 pushd pkgs &> /dev/null
 tar xvjf ../tar/valgrind-3.14.0.tar.bz2
 ln -s valgrind-3.14.0 valgrind
-pushd valgrind
-./configure
-make -j
+pushd valgrind &> /dev/null
+mkdir -p valgrind-build valgrind-install
+pushd valgrind-build &> /dev/null
+../configure --prefix=`pwd`/../valgrind-install
+make -j install
+popd &> /dev/null
 popd &> /dev/null
