@@ -7,14 +7,14 @@ all: download build test1-build
 build: elfutils-build dyninst-config dyninst-build test1-build
 
 #----------------------------------------------------------------------------
-# download cilktools, elfutils, boost, and dyninst
+# download valgrind, elfutils, boost, and dyninst
 #
 # warning: 
 #   the download step may overwrite any changes you have made
 #   understand what you are doing before running this again
 #----------------------------------------------------------------------------
 
-download: cilktools-download elfutils-download boost-install dyninst-download 
+download: valgrind-download elfutils-download boost-install dyninst-download
 	echo > download
 
 #----------------------------------------------------------------------------
@@ -33,9 +33,10 @@ dyninst-download:
 
 dyninst-config:
 	scripts/dyninst-config.sh
+	touch dyninst-config
 
 dyninst-build:
-	make -C dyninst/dyninst-build install
+	make -j -C dyninst/dyninst-build install
 
 dyninst-remove:
 	scripts/dyninst-remove.sh
@@ -48,11 +49,11 @@ boost-install:
 	scripts/boost-install.sh
 
 #----------------------------------------------------------------------------
-# cilktools
+# valgrind
 #----------------------------------------------------------------------------
 
-cilktools-download:
-	scripts/cilktools-install.sh 
+valgrind-download:
+	scripts/valgrind-install.sh 
 
 #----------------------------------------------------------------------------
 # elfutils
@@ -72,6 +73,6 @@ elfutils-remove:
 #----------------------------------------------------------------------------
 
 distclean:
-	scripts/cilktools-uninstall.sh 
+	scripts/valgrind-uninstall.sh 
 	/bin/rm -rf boost_1_61_0
 	/bin/rm -rf pkgs
