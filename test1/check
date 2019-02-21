@@ -1,7 +1,6 @@
 #!/bin/bash
 
 DATE=`date '+%F.%T'`
-OUTPUTS=''
 
 run() {
   TOOL=$1
@@ -12,9 +11,8 @@ run() {
     --tool=$TOOL --suppressions=system.supp \
     --fair-sched=yes "$@" \
     ./cilk-parse demo/demo &> "errors.$DATE.$IDENT"
-  OUTPUTS="$OUTPUTS errors.$DATE.$IDENT"
+  ln -sf errors.$DATE.$IDENT errors.last.$IDENT
 }
 
 run helgrind hel
 run drd drd
-less -S $OUTPUTS

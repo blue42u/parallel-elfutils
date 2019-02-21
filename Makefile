@@ -4,7 +4,7 @@
 
 all: download build check
 
-build: elfutils-build dyninst-build test1-build
+build: elfutils-build dyninst-build
 
 #----------------------------------------------------------------------------
 # download valgrind, elfutils, boost, and dyninst
@@ -22,11 +22,11 @@ download: boost valgrind elfutils dyninst
 # dyninst test harness for detecting races caused by libdw in elfutils
 #----------------------------------------------------------------------------
 
-test1-build: dyninst-build
-	$(MAKE) -j -C test1
+check: dyninst-build
+	$(MAKE) -C test1
 
-check:
-	$(MAKE) -j -C test1 check
+last:
+	$(MAKE) -C test1 last
 
 #----------------------------------------------------------------------------
 # dyninst
@@ -102,7 +102,8 @@ elfutils-build: elfutils
 		../../elfutils/configure \
 			--enable-maintainer-mode \
 			--prefix=$(INST) \
-			CFLAGS="-g -O3"; fi
+			CFLAGS="-g -O3" \
+			INSTALL="$(shell which install) -C"; fi
 	$(MAKE) -j -C build/elfutils install
 
 #----------------------------------------------------------------------------
