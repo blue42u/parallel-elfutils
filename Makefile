@@ -38,6 +38,7 @@ dyninst:
 dyninst-build: boost dyninst
 	@mkdir -p build/dyninst install/
 	@cd build/dyninst && if [ ! -e Makefile ]; then cmake \
+		-DCMAKE_CXX_FLAGS="-O3" -DCMAKE_C_FLAGS="-O3" \
 	        -DPATH_BOOST=$(INST) \
 		-DCMAKE_INSTALL_PREFIX=$(INST) \
 		-DCMAKE_CXX_FLAGS="-DENABLE_VG_ANNOTATIONS -I$(INST)" \
@@ -45,9 +46,7 @@ dyninst-build: boost dyninst
 		-DLIBELF_LIBRARIES=$(INST)/lib/libelf.so \
 		-DLIBDWARF_INCLUDE_DIR=$(INST)/include \
 		-DLIBDWARF_LIBRARIES=$(INST)/lib/libdw.so \
-		-DCMAKE_C_COMPILER=`which icc` \
 		-DCMAKE_BUILD_TYPE=Debug \
-		-DCMAKE_CXX_COMPILER=`which icpc` \
 		../../dyninst; fi
 	$(MAKE) -j -C build/dyninst install
 
@@ -94,15 +93,16 @@ valgrind: boost
 
 elfutils:
 	git submodule update --init elfutils
-	cd elfutils && autoreconf -i
 
 elfutils-build: elfutils
 	@mkdir -p build/elfutils
+	@cd elfutils && if [ ! -e config/missing ]; then \
+		autoreconf -i; fi
 	@cd build/elfutils && if [ ! -e Makefile ]; then \
 		../../elfutils/configure \
 			--enable-maintainer-mode \
 			--prefix=$(INST) \
-			CFLAGS="-g -O0"; fi
+			CFLAGS="-g -O3"; fi
 	$(MAKE) -j -C build/elfutils install
 
 #----------------------------------------------------------------------------

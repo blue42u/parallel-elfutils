@@ -23,6 +23,17 @@
 }
 
 {
+  libomp: library calls
+  Helgrind:Race
+  obj:*lib*omp.so*
+}
+{
+  libomp: library calls
+  drd:ConflictingAccess
+  obj:*lib*omp.so*
+}
+
+{
   libomp: inlined
   Helgrind:Race
   src:kmp_*.*

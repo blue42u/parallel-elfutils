@@ -1,7 +1,7 @@
 WORK=$(shell pwd)/..
 INSTALL=$(WORK)/install
 
-CFLAGS=-O0 -g
+CFLAGS=-O3 -g
 
 cilk-parse: cilk-parse.cpp
 	icpc $(CFLAGS) -std=c++11 -I$(INSTALL)/include -o $@ $< \
