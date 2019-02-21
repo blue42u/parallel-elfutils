@@ -94,7 +94,7 @@ valgrind: boost
 
 elfutils:
 	git submodule update --init elfutils
-	cd elfutils && autoreconf -i -f
+	cd elfutils && autoreconf -i
 
 elfutils-build: elfutils
 	@mkdir -p build/elfutils
