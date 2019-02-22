@@ -4,7 +4,7 @@ local outf = assert(io.open(table.remove(args), 'w'))
 assert(#args > 0, "Not enough arguments!")
 print('Running: callgrind_annotate '..table.concat(args))
 local cg = io.popen('../install/valgrind/bin/callgrind_annotate '
-	..table.concat(args), 'r')
+	..table.concat(args, ' '), 'r')
 
 -- Skip over the header data first
 -- Separater starts with '---'

@@ -32,7 +32,7 @@ errors.%: cilk-parse $(INPUTFILE)
 errors.coverage: cilk-parse $(INPUTFILE)
 	$(VAL) $(VFLAGS) -q --tool=callgrind \
 		--callgrind-out-file=callgrind.$(DATE).coverage ./$+
-	lua cgstats.lua callgrind.$(DATE) errors.$(DATE).coverage
+	lua cgstats.lua --threshold=100 callgrind.$(DATE).coverage errors.$(DATE).coverage
 	ln -sf errors.$(DATE).coverage errors.coverage
 
 ### Now for the more normal compilation stuff
