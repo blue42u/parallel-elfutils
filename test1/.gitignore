@@ -1,4 +1,5 @@
 cilk-parse
 demo/demo
-*.hel
+*.helgrind
 *.drd
+*.coverage

@@ -15,6 +15,7 @@ build: elfutils-build dyninst-build
 #----------------------------------------------------------------------------
 
 INST = $(shell pwd)/install
+XFLAGS = -O0 -g
 
 download: boost valgrind elfutils dyninst
 
@@ -36,16 +37,16 @@ dyninst:
 	git submodule update --init dyninst
 
 dyninst-build: boost dyninst
-	@mkdir -p build/dyninst install/
+	@mkdir -p build/dyninst install/dyninst
 	@cd build/dyninst && if [ ! -e Makefile ]; then cmake \
-		-DCMAKE_CXX_FLAGS="-O3" -DCMAKE_C_FLAGS="-O3" \
-	        -DPATH_BOOST=$(INST) \
-		-DCMAKE_INSTALL_PREFIX=$(INST) \
-		-DCMAKE_CXX_FLAGS="-DENABLE_VG_ANNOTATIONS -I$(INST)" \
-		-DLIBELF_INCLUDE_DIR=$(INST)/include \
-		-DLIBELF_LIBRARIES=$(INST)/lib/libelf.so \
-		-DLIBDWARF_INCLUDE_DIR=$(INST)/include \
-		-DLIBDWARF_LIBRARIES=$(INST)/lib/libdw.so \
+		-DCMAKE_CXX_FLAGS="$(XFLAGS)" -DCMAKE_C_FLAGS="$(XFLAGS)" \
+	        -DBOOST_ROOT=$(INST)/boost -DPATH_BOOST=$(INST)/boost \
+		-DCMAKE_INSTALL_PREFIX=$(INST)/dyninst \
+		-DCMAKE_CXX_FLAGS="-DENABLE_VG_ANNOTATIONS" \
+		-DLIBELF_INCLUDE_DIR=$(INST)/elfutils/include \
+		-DLIBELF_LIBRARIES=$(INST)/elfutils/lib/libelf.so \
+		-DLIBDWARF_INCLUDE_DIR=$(INST)/elfutils/include \
+		-DLIBDWARF_LIBRARIES=$(INST)/elfutils/lib/libdw.so \
 		-DCMAKE_BUILD_TYPE=Debug \
 		../../dyninst; fi
 	$(MAKE) -j -C build/dyninst install
@@ -55,7 +56,7 @@ dyninst-build: boost dyninst
 #----------------------------------------------------------------------------
 
 boost:
-	@mkdir -p install/ download/
+	@mkdir -p install/boost download/
 	cd download && wget --no-check-certificate -N http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.zip
 	unzip -qo download/boost_1_61_0.zip
 	mv boost_1_61_0 boost
@@ -72,19 +73,19 @@ boost:
 		--runtime-link=shared \
 		--layout=tagged \
 		--threading=multi \
-		--prefix=../install -j 16 install
+		--prefix=../install/boost -j 16 install
 
 #----------------------------------------------------------------------------
 # valgrind
 #----------------------------------------------------------------------------
 
 valgrind: boost
-	@mkdir -p install/ download/
+	@mkdir -p install/valgrind download/
 	cd download && wget -N http://www.valgrind.org/downloads/valgrind-3.14.0.tar.bz2
 	tar xjf download/valgrind-3.14.0.tar.bz2
 	mv valgrind-3.14.0 valgrind
-	cd valgrind && CPPFLAGS="-I$(INST)/include -L$(INST)/lib" \
-		./configure --prefix=$(INST)
+	cd valgrind && CPPFLAGS="-I$(INST)/boost/include -L$(INST)/boost/lib" \
+		./configure --prefix=$(INST)/valgrind
 	cd valgrind && $(MAKE) -j install
 
 #----------------------------------------------------------------------------
@@ -95,14 +96,14 @@ elfutils:
 	git submodule update --init elfutils
 
 elfutils-build: elfutils
-	@mkdir -p build/elfutils
+	@mkdir -p build/elfutils install/elfutils
 	@cd elfutils && if [ ! -e config/missing ]; then \
 		autoreconf -i; fi
 	@cd build/elfutils && if [ ! -e Makefile ]; then \
 		../../elfutils/configure \
 			--enable-maintainer-mode \
-			--prefix=$(INST) \
-			CFLAGS="-g -O3" \
+			--prefix=$(INST)/elfutils \
+			CFLAGS="$(XFLAGS)" \
 			INSTALL="$(shell which install) -C"; fi
 	$(MAKE) -j -C build/elfutils install
 

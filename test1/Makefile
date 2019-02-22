@@ -1,24 +1,50 @@
 WORK=$(shell pwd)/..
 INSTALL=$(WORK)/install
 
-CFLAGS=-O3 -g
+DATE=$(shell date '+%F.%T')
+VAL=$(INSTALL)/valgrind/bin/valgrind
+VFLAGS= --suppressions=system.supp --fair-sched=yes
 
-.PHONY: check run last
+INPUTFILE=demo/demo
+#INPUTFILE=$(INSTALL)/elfutils/lib/libdw.so
 
-# Most of the time you just want to run it again and view the output
-check: run last
+ERRORKINDS=helgrind drd coverage
+ERRORFILES=$(foreach x,$(ERRORKINDS),errors.$(x))
 
-run: cilk-parse demo/demo
-	./check
+.PHONY: run last
 
+### Top-level targets
+
+# Run all the bits and display the resulting logs
+run: $(ERRORFILES)
+	less -S $+
+
+# View the last logs from the last run without updating them
 last:
-	less -S errors.last.hel errors.last.drd
+	less -S $(ERRORFILES)
+
+### Test machinery
+
+errors.%: cilk-parse $(INPUTFILE)
+	$(VAL) $(VFLAGS) --tool=$* --log-file=errors.$(DATE).$* ./$+
+	ln -sf errors.$(DATE).$* errors.$*
+
+errors.coverage: cilk-parse $(INPUTFILE)
+	$(VAL) $(VFLAGS) -q --tool=callgrind \
+		--callgrind-out-file=callgrind.$(DATE).coverage ./$+
+	lua cgstats.lua callgrind.$(DATE) errors.$(DATE).coverage
+	ln -sf errors.$(DATE).coverage errors.coverage
+
+### Now for the more normal compilation stuff
+
+CFLAGS += -O0 -g
 
 cilk-parse: cilk-parse.cpp
-	icpc $(CFLAGS) -std=c++11 -I$(INSTALL)/include -o $@ $< \
-		-L$(INSTALL)/lib -Wl,-rpath=$(INSTALL)/lib \
-		-lsymtabAPI \
-		-lparseAPI \
-		-linstructionAPI
+	icpc $(CFLAGS) -std=c++11 \
+		-I$(INSTALL)/dyninst/include -I$(INSTALL)/boost/include \
+		-o $@ $< \
+		-L$(INSTALL)/dyninst/lib -Wl,-rpath=$(INSTALL)/dyninst/lib \
+		-L$(INSTALL)/boost/lib -Wl,-rpath=$(INSTALL)/boost/lib \
+		-lsymtabAPI -lparseAPI -linstructionAPI
 demo/demo:
 	$(MAKE) -C demo
