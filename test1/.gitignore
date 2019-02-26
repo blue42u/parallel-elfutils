@@ -1,5 +1,4 @@
 cilk-parse
 demo/demo
-*.helgrind
-*.drd
-*.coverage
+errors.*
+output.*

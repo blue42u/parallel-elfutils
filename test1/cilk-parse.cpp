@@ -31,7 +31,7 @@
 //
 // ----------------------------------------------------------------------
 //
-//  This program is a proxy for hpcstruct with cilk threads.
+//  This program is a proxy for hpcstruct with threads.
 //
 //  Iterate through the same hierarchy of functions, loops, blocks,
 //  instructions, inline call sequences and line map info, and collect
@@ -40,12 +40,11 @@
 //  for each function.
 //
 //  This program tests that ParseAPI and SymtabAPI can be run in
-//  parallel with cilk threads.  For now, we parse the entire binary
-//  sequentially (unless ParseAPI is built with threads) and then make
-//  parallel queries.
+//  parallel.  For now, we parse the entire binary sequentially (unless
+//  ParseAPI is built with threads) and then make parallel queries.
 //
 //  Build me as:
-//  ./mk-dyninst.sh  -fcilkplus  cilk-parse.cpp  externals-dir
+//  ./mk-dyninst.sh  cilk-parse.cpp  externals-dir
 //
 //  Usage:
 //  ./cilk-parse  [options]...  filename  [ num-threads ]
@@ -54,9 +53,8 @@
 //   -I, -Iall    do not split basic blocks into instructions
 //   -Iinline     do not compute inline callsite sequences
 //   -Iline       do not compute line map info
+//   -q           don't acutally print anything
 //
-
-#define MY_USE_CILK  1
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -65,14 +63,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#if MY_USE_CILK
-#include <cilk/cilk.h>
-#include <cilk/cilk_api.h>
-#define CILK_FOR  cilk_for
-#else
-#define CILK_FOR  for
-#endif
 
 #include <iostream>
 #include <map>
@@ -102,7 +92,6 @@ typedef map <Block *, bool> BlockSet;
 typedef unsigned int uint;
 
 Symtab * the_symtab = NULL;
-mutex mtx;
 
 // Command-line options
 class Options {
@@ -112,6 +101,7 @@ public:
     bool  do_instns;
     bool  do_inline;
     bool  do_linemap;
+    bool  do_prints;
 
     Options() {
 	filename = NULL;
@@ -119,6 +109,7 @@ public:
 	do_instns = true;
 	do_inline = true;
 	do_linemap = true;
+        do_prints = true;
     }
 };
 
@@ -313,48 +304,38 @@ doFunction(ParseAPI::Function * func)
     }
 
     // print info for this function
-    mtx.lock();
-
-    cout << "\n--------------------------------------------------\n"
-	 << hex
-	 << "func:  0x" << finfo.addr << "  " << finfo.name << "\n"
-	 << "0x" << finfo.min_vma << "--0x" << finfo.max_vma << "\n"
-	 << dec
-	 << "loops:  " << finfo.num_loops
-	 << "  blocks:  " << finfo.num_blocks
-	 << "  instns:  " << finfo.num_instns << "\n"
-	 << "inline depth:  " << finfo.max_depth
-	 << "  line range:  " << finfo.min_line << "--" << finfo.max_line
-	 << "\n";
-
-    mtx.unlock();
+    if(opts.do_prints)
+        #pragma omp ordered
+        cout << "\n--------------------------------------------------\n"
+	     << hex
+	     << "func:  0x" << finfo.addr << "  " << finfo.name << "\n"
+	     << "0x" << finfo.min_vma << "--0x" << finfo.max_vma << "\n"
+	     << dec
+	     << "loops:  " << finfo.num_loops
+	     << "  blocks:  " << finfo.num_blocks
+	     << "  instns:  " << finfo.num_instns << "\n"
+	     << "inline depth:  " << finfo.max_depth
+	     << "  line range:  " << finfo.min_line << "--" << finfo.max_line
+	     << "\n";
 }
 
 //----------------------------------------------------------------------
 
-void
-usage(string mesg)
-{
-    if (! mesg.empty()) {
-	cout << "error: " << mesg << "\n\n";
-    }
+const std::string usageMessage = 
+    "usage: cilk-parse [options]... filename [num-threads]\n\n"
+    "options:\n"
+    "  -I, -Iall    do not split basic blocks into instructions\n"
+    "  -Iinline     do not compute inline callsite sequences\n"
+    "  -Iline       do not compute line map info\n"
+    "  -q           don't actually print anything\n"
+    "\n";
 
-    cout << "usage: cilk-parse [options]... filename [num-threads]\n\n"
-	 << "options:\n"
-	 << "  -I, -Iall    do not split basic blocks into instructions\n"
-	 << "  -Iinline     do not compute inline callsite sequences\n"
-	 << "  -Iline       do not compute line map info\n"
-	 << "\n";
-
-    exit(1);
-}
-
-// Command-line: [options]... filename [num-threads]
 void
 getOptions(int argc, char **argv, Options & opts)
 {
     if (argc < 2) {
-	usage("");
+        cerr << usageMessage;
+        exit(1);
     }
 
     int n = 1;
@@ -373,8 +354,13 @@ getOptions(int argc, char **argv, Options & opts)
 	    opts.do_linemap = false;
 	    n++;
 	}
+        else if (arg == "-q") {
+            opts.do_prints = false;
+            n++;
+        }
 	else if (arg[0] == '-') {
-	    usage("invalid option: " + arg);
+	    cerr << "invalid option: " << arg << "\n" << usageMessage;
+            exit(1);
 	}
 	else {
 	    break;
@@ -386,23 +372,20 @@ getOptions(int argc, char **argv, Options & opts)
 	opts.filename = argv[n];
     }
     else {
-	usage("missing file name");
+	cerr << "missing file name\n" << usageMessage;
     }
     n++;
 
     // num threads (optional)
-    char *str = getenv("CILK_NWORKERS");
     if (n < argc) {
 	opts.num_threads = atoi(argv[n]);
-    }
-    else if (str != NULL) {
-	opts.num_threads = atoi(str);
     }
     else {
 	opts.num_threads = DEFAULT_THREADS;
     }
     if (opts.num_threads <= 0) {
-	usage("bad value for num threads");
+        cerr << "bad argument for num_threads\n" << usageMessage;
+        exit(1);
     }
 }
 
@@ -430,32 +413,13 @@ main(int argc, char **argv)
 
     getOptions(argc, argv, opts);
 
-#if MY_USE_CILK
-    // cilk set_param requires char * for value, not int
-    char buf[10];
-    snprintf(buf, 10, "%d", opts.num_threads);
-
-#if 0
-    int ret = __cilkrts_set_param("nworkers", buf);
-    if (ret != __CILKRTS_SET_PARAM_SUCCESS) {
-	errx(1, "__cilkrts_set_param failed: %d", ret);
-    }
-#endif
-#else
-    opts.num_threads = 1;
-#endif
-
     gettimeofday(&tv_init, NULL);
     getrusage(RUSAGE_SELF, &ru_init);
-
-    cout << "begin parsing: " << opts.filename << "\n"
-	 << "num threads: " << opts.num_threads << "\n";
 
     if (! Symtab::openFile(the_symtab, opts.filename)) {
 	errx(1, "Symtab::openFile failed: %s", opts.filename);
     }
     the_symtab->parseTypesNow();
-#if 0
     the_symtab->parseFunctionRanges();
 
     vector <Module *> modVec;
@@ -475,7 +439,7 @@ main(int argc, char **argv)
     gettimeofday(&tv_parse, NULL);
     getrusage(RUSAGE_SELF, &ru_parse);
 
-    // get function list and convert to vector.  cilk_for requires a
+    // get function list and convert to vector. parallel for requires a
     // random access container.
 
     const CodeObject::funclist & funcList = code_obj->funcs();
@@ -486,7 +450,8 @@ main(int argc, char **argv)
 	funcVec.push_back(func);
     }
 
-    CILK_FOR (long n = 0; n < funcVec.size(); n++) {
+#pragma omp parallel for num_threads(opts.num_threads) schedule(static,1) ordered
+    for (long n = 0; n < funcVec.size(); n++) {
 	ParseAPI::Function * func = funcVec[n];
 	doFunction(func);
     }
@@ -494,16 +459,9 @@ main(int argc, char **argv)
     gettimeofday(&tv_fini, NULL);
     getrusage(RUSAGE_SELF, &ru_fini);
 
-    cout << "\ndone parsing: " << opts.filename << "\n"
-	 << "num threads: " << opts.num_threads
-	 << "  num funcs: " << funcVec.size() << "\n\n";
-
-    printTime("init:  ", &tv_init, &tv_init, &ru_init, &ru_init);
-    printTime("symtab:", &tv_init, &tv_symtab, &ru_init, &ru_symtab);
-    printTime("parse: ", &tv_symtab, &tv_parse, &ru_symtab, &ru_parse);
-    printTime("struct:", &tv_parse, &tv_fini, &ru_parse, &ru_fini);
-    printTime("total: ", &tv_init, &tv_fini, &ru_init, &ru_fini);
-#endif
+    if(opts.do_prints)
+        cout << "\ndone parsing: " << opts.filename << "\n"
+	     << "  num funcs: " << funcVec.size() << "\n\n";
 
     return 0;
 }

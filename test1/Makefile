@@ -3,12 +3,11 @@ INSTALL=$(WORK)/install
 
 DATE=$(shell date '+%F.%T')
 VAL=$(INSTALL)/valgrind/bin/valgrind
-VFLAGS= --suppressions=system.supp --fair-sched=yes
 
 INPUTFILE=demo/demo
 #INPUTFILE=$(INSTALL)/elfutils/lib/libdw.so
 
-ERRORKINDS=helgrind drd coverage
+ERRORKINDS=helgrind drd coverage stability
 ERRORFILES=$(foreach x,$(ERRORKINDS),errors.$(x))
 
 .PHONY: run last
@@ -25,22 +24,45 @@ last:
 
 ### Test machinery
 
-errors.%: cilk-parse $(INPUTFILE)
-	$(VAL) $(VFLAGS) --tool=$* --log-file=errors.$(DATE).$* ./$+
-	ln -sf errors.$(DATE).$* errors.$*
+ERRORS=errors.$(DATE)
+OUTPUT=output.$(DATE)
 
-errors.coverage: cilk-parse $(INPUTFILE)
-	$(VAL) $(VFLAGS) -q --tool=callgrind \
-		--callgrind-out-file=callgrind.$(DATE).coverage ./$+
-	lua cgstats.lua --threshold=100 callgrind.$(DATE).coverage errors.$(DATE).coverage
-	ln -sf errors.$(DATE).coverage errors.coverage
+VFLAGS=--suppressions=system.supp --fair-sched=yes
+VFLAGS_callgrind=--callgrind-out-file=$(OUTPUT).callgrind
+
+DEPS=cilk-parse $(INPUTFILE)
+CMD=./cilk-parse -q $(INPUTFILE)
+CMDT=./cilk-parse $(INPUTFILE)
+
+# For helgrind and drd
+errors.%: $(DEPS)
+	$(VAL) $(VFLAGS) $(VFLAGS_$*) --tool=$* --log-file=$(ERRORS).$* $(CMD)
+	ln -sf $(ERRORS).$* errors.$*
+
+# For callgrind
+output.%: $(DEPS)
+	$(VAL) $(VFLAGS) $(VFLAGS_$*) -q --tool=$* $(CMD)
+	ln -sf $(OUTPUT).$* output.$*
+
+# Simple check for stability
+errors.stability: $(DEPS)
+	$(CMDT) 1 > a.log
+	$(CMDT) 24 > b.log
+	diff -s a.log b.log > $(ERRORS).stability
+	rm a.log b.log
+	ln -sf $(ERRORS).stability errors.stability
+
+# Coarse, inaccurate coverage results
+errors.coverage: output.callgrind cgstats.lua
+	lua cgstats.lua output.callgrind $(ERRORS).coverage
+	ln -sf $(ERRORS).coverage errors.coverage
 
 ### Now for the more normal compilation stuff
 
-CFLAGS += -O0 -g
+CFLAGS += -O0 -g -Wall
 
 cilk-parse: cilk-parse.cpp
-	icpc $(CFLAGS) -std=c++11 \
+	cc $(CFLAGS) -std=c++11 -fopenmp \
 		-I$(INSTALL)/dyninst/include -I$(INSTALL)/boost/include \
 		-o $@ $< \
 		-L$(INSTALL)/dyninst/lib -Wl,-rpath=$(INSTALL)/dyninst/lib \

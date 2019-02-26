@@ -1,10 +1,8 @@
 -- Pop open a callgrind_annotate instance, assuming its where we think it is
-local args = {...}
-local outf = assert(io.open(table.remove(args), 'w'))
-assert(#args > 0, "Not enough arguments!")
-print('Running: callgrind_annotate '..table.concat(args))
+local inf,outf = ...
+outf = assert(io.open(outf, 'w'))
 local cg = io.popen('../install/valgrind/bin/callgrind_annotate '
-	..table.concat(args, ' '), 'r')
+	..'--threshold=100 '..inf, 'r')
 
 -- Skip over the header data first
 -- Separater starts with '---'
@@ -26,6 +24,37 @@ local function dowecare(s)
 	return true
 end
 
+-- Do we care about this symbol?
+local function dowecaresym(s)
+	local skipns = {std=true, __gnu_cxx=true, boost=true, tbb=true}
+	if skipns[s:match '^(.-)::'] then return end
+	if s:find 'thunk to' then return end
+	return true
+end
+
+-- Strip off any unnessesary data off the symbol, to help deduping
+local function stripsym(s)
+	if s:match '^_Z' then	-- Time for some very basic demangling
+		local bits = {}
+		if s:match '^_ZNSt' then bits[#bits+1] = 'std' end
+		local start,fin = s:find '%d+'
+		repeat
+			local cnt = tonumber(s:sub(start,fin), 10)
+			bits[#bits+1] = s:sub(fin+1,fin+cnt)
+			start,fin = s:find('^%d+', fin+cnt+1)
+		until not start
+		s = table.concat(bits, '::')..' ???'
+	else
+		s = s:gsub('%s+', ' '):gsub('^ ', ''):gsub(' $', '')
+		s = s:gsub('\'%d+$', '')
+		s = s:gsub('const$', ''):gsub('%[.+%]', '')
+		s = s:gsub('%b<>', '<>')
+		s = s:reverse():gsub('%b)(', ')...(', 1):reverse()
+		s = s:gsub('^.+ ', '')
+	end
+	return s
+end
+
 -- Now read in the lovely data
 local data,skipped = {},{}
 for l in cg:lines() do
@@ -40,8 +69,9 @@ for l in cg:lines() do
 	if sym:sub(-1) == ']' then
 		sym,obj = sym:match '^(.+)%s+%[(.-)%]$'
 	end
+	sym = stripsym(sym)
 
-	if dowecare(src) then
+	if dowecare(src) and dowecaresym(sym) then
 		if obj then
 			data[obj] = data[obj] or {}
 			data[obj][sym] = true
@@ -73,7 +103,10 @@ for obj in pairs(data) do
 		if not ty then
 			error('Failed nm match: '..l)
 		end
-		if ty == 't' or ty == 'T' then ss[sym] = true end
+		sym = stripsym(sym)
+		if (ty == 't' or ty == 'T') and dowecaresym(sym) then
+			ss[sym] = true
+		end
 	end
 	assert(p:close())
 	allsyms[obj] = ss
@@ -117,16 +150,19 @@ objs = oorder	-- Let Lua GC again, kind of.
 -- Pretty-print the heading with the general stats
 outf:write '\n'
 do
-	local namelen, missedlen = 0,0
+	local namelen, missedlen = 0,#('total')
 	for _,o in ipairs(objs) do
 		namelen = math.max(namelen, #o.name)
 		missedlen = math.max(missedlen, math.ceil(math.log10(o.call-o.cseen)))
 	end
 	missedlen = missedlen + 1
 	local fmt = "%"..namelen.."s:% 5.1f%%, missed % "..missedlen.."d, extraneous %d\n"
+	local tseen,tall,tmissing = 0,0,0
 	for _,o in ipairs(objs) do
+		tseen,tall,tmissing = tseen+o.cseen,tall+o.call,tmissing+o.cmissing
 		outf:write(fmt:format(o.name,o.cseen/o.call*100,o.call-o.cseen,o.cmissing))
 	end
+	outf:write(fmt:format('total',tseen/tall*100,tall-tseen,tmissing))
 end
 
 -- Print a stanza with the "extraneous" symbols, header-scope
