@@ -79,6 +79,8 @@
 #include <Instruction.h>
 #include <LineInformation.h>
 
+#include <omp.h>
+
 #define MAX_VMA  0xfffffffffffffff0
 #define DEFAULT_THREADS  4
 
@@ -391,30 +393,11 @@ getOptions(int argc, char **argv, Options & opts)
 
 //----------------------------------------------------------------------
 
-void
-printTime(const char *label, struct timeval *tv_prev, struct timeval *tv_now,
-	  struct rusage *ru_prev, struct rusage *ru_now)
-{
-    float delta = (float)(tv_now->tv_sec - tv_prev->tv_sec)
-	+ ((float)(tv_now->tv_usec - tv_prev->tv_usec))/1000000.0;
-
-    printf("%s  %8.1f sec  %8ld meg  %8ld meg\n", label, delta,
-	   (ru_now->ru_maxrss - ru_prev->ru_maxrss)/1024,
-	   ru_now->ru_maxrss/1024);
-}
-
-//----------------------------------------------------------------------
-
 int
 main(int argc, char **argv)
 {
-    struct timeval tv_init, tv_symtab, tv_parse, tv_fini;
-    struct rusage  ru_init, ru_symtab, ru_parse, ru_fini;
-
     getOptions(argc, argv, opts);
-
-    gettimeofday(&tv_init, NULL);
-    getrusage(RUSAGE_SELF, &ru_init);
+    omp_set_num_threads(opts.num_threads);
 
     if (! Symtab::openFile(the_symtab, opts.filename)) {
 	errx(1, "Symtab::openFile failed: %s", opts.filename);
@@ -429,15 +412,9 @@ main(int argc, char **argv)
 	(*mit)->parseLineInformation();
     }
 
-    gettimeofday(&tv_symtab, NULL);
-    getrusage(RUSAGE_SELF, &ru_symtab);
-
     SymtabCodeSource * code_src = new SymtabCodeSource(the_symtab);
     CodeObject * code_obj = new CodeObject(code_src);
     code_obj->parse();
-
-    gettimeofday(&tv_parse, NULL);
-    getrusage(RUSAGE_SELF, &ru_parse);
 
     // get function list and convert to vector. parallel for requires a
     // random access container.
@@ -451,13 +428,10 @@ main(int argc, char **argv)
     }
 
 #pragma omp parallel for num_threads(opts.num_threads) schedule(static,1) ordered
-    for (long n = 0; n < funcVec.size(); n++) {
+    for (size_t n = 0; n < funcVec.size(); n++) {
 	ParseAPI::Function * func = funcVec[n];
 	doFunction(func);
     }
-
-    gettimeofday(&tv_fini, NULL);
-    getrusage(RUSAGE_SELF, &ru_fini);
 
     if(opts.do_prints)
         cout << "\ndone parsing: " << opts.filename << "\n"
