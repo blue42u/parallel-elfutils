@@ -30,7 +30,7 @@ local function dowecaresym(s)
 	if skipns[s:match '^(.-)::'] then return end
 	if s:find '^_%u' or s:find '^__libc' then return end
 	if s:lower():find '^gomp_' or s:find '^goacc_' then return end
-	if s:find '^__cxa' or s:find '^__cxxabi' thene return end
+	if s:find '^__cxa' or s:find '^__cxxabi' then return end
 	if s == '_fini' or s == '_init' or s == '_start' then return end
 	if s == '__stat' or s:find '^_compat' then return end
 	if s == 'omp_set_num_threads' then return end
