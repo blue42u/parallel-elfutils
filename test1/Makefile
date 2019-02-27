@@ -30,7 +30,10 @@ OUTPUT=output.$(DATE)
 VFLAGS=--suppressions=system.supp --fair-sched=yes
 VFLAGS_callgrind=--callgrind-out-file=$(OUTPUT).callgrind
 
-DEPS=cilk-parse $(INPUTFILE)
+DEPS=cilk-parse $(INPUTFILE) system.supp 
+DEPS += $(INSTALL)/dyninst/lib/libsymtabAPI.so
+DEPS += $(INSTALL)/dyninst/lib/libparseAPI.so
+DEPS += $(INSTALL)/dyninst/lib/libinstructionAPI.so
 CMD=./cilk-parse -q $(INPUTFILE)
 CMDT=./cilk-parse $(INPUTFILE)
 
