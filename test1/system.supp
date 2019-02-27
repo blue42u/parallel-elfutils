@@ -23,49 +23,25 @@
 }
 
 {
-  libomp: library calls
+  libgomp
   Helgrind:Race
-  obj:*lib*omp.so*
+  fun:gomp_*
 }
 {
-  libomp: library calls
+  libgomp
   drd:ConflictingAccess
-  obj:*lib*omp.so*
+  fun:gomp_*
 }
 
 {
-  libomp: inlined
+  libgomp
   Helgrind:Race
-  src:kmp_*.*
+  fun:GOMP_*
 }
 {
-  libomp: inlined
+  libgomp
   drd:ConflictingAccess
-  src:kmp_*.*
-}
-
-{
-  libomp: thread management
-  Helgrind:Race
-  src:z_Linux_util.cpp
-}
-{
-  libomp: thread management
-  drd:ConflictingAccess
-  src:z_Linux_util.cpp
-}
-
-{
-  libomp: thread cleanup
-  Helgrind:Race
-  ...
-  fun:__kmp_suspend_uninitialize_thread
-}
-{
-  libomp: thread cleanup
-  drd:ConflictingAccess
-  ...
-  fun:__kmp_suspend_uninitialize_thread
+  fun:GOMP_*
 }
 
 {

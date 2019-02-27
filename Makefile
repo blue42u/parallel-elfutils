@@ -17,7 +17,7 @@ build: elfutils-build dyninst-build
 INST = $(shell pwd)/install
 XFLAGS = -O0 -g
 
-download: boost valgrind elfutils dyninst
+download: gcc boost valgrind elfutils dyninst
 
 #----------------------------------------------------------------------------
 # dyninst test harness for detecting races caused by libdw in elfutils
@@ -87,6 +87,24 @@ valgrind: boost
 	cd valgrind && CPPFLAGS="-I$(INST)/boost/include -L$(INST)/boost/lib" \
 		./configure --prefix=$(INST)/valgrind
 	cd valgrind && $(MAKE) -j install
+
+#----------------------------------------------------------------------------
+# GCC (really just libgomp)
+#----------------------------------------------------------------------------
+
+gcc:
+	@mkdir -p install/gcc download/
+	cd download && wget -N ftp://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-6.4.0/gcc-6.4.0.tar.xz
+	tar xJf download/gcc-6.4.0.tar.xz
+	mv gcc-6.4.0 gcc
+	cd gcc && ./contrib/download_prerequisites
+	cd gcc && CPPFLAGS='-g' ./configure \
+		--prefix=$(INST)/gcc --disable-linux-futex --disable-multilib \
+		--disable-bootstrap --disable-libquadmath \
+		--disable-gcov --disable-libada --disable-libsanitizer \
+		--disable-libssp --disable-libquadmath-support --disable-libvtv
+	cd gcc && $(MAKE) -j
+	cd gcc && $(MAKE) -j install
 
 #----------------------------------------------------------------------------
 # elfutils
