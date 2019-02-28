@@ -24,10 +24,10 @@ download: boost valgrind elfutils dyninst
 #----------------------------------------------------------------------------
 
 check: dyninst-build
-	$(MAKE) -C test1
+	$(MAKE) -C tests
 
 last:
-	$(MAKE) -C test1 last
+	$(MAKE) -C tests last
 
 #----------------------------------------------------------------------------
 # dyninst
