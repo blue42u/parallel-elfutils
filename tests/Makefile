@@ -62,7 +62,7 @@ define valgrind
 $(call errors,$(t),$(i),%) $(call output,$(t),$(i),%): $(t) $(i) $(GLOBALDEPS)
 	$(VAL) --tool=$$* --log-file=$(call errors,$(t),$(i),$$*) \
 		$$(VFLAGS) $$(call VFLAGS_$$*,$(call output,$(t),$(i),$$*)) \
-		./$(t) $(i)
+		./$(t) $(i) > /dev/null
 
 endef
 $(eval $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call valgrind))))
@@ -72,7 +72,7 @@ define stability
 $(call errors,$(t),$(i),stability): $(t) $(i) $(GLOBALDEPS)
 	./$(t) $(i) 1 > a.log
 	./$(t) $(i) 24 > b.log
-	diff -s a.log b.log > $@
+	diff -s a.log b.log > $$@
 	rm -f a.log b.log
 
 endef

@@ -15,7 +15,12 @@ end
 local function dowecaresym(s)
 	local skipns = {std=true, __gnu_cxx=true, boost=true, tbb=true}
 	if skipns[s:match '^(.-)::'] then return end
-	if s:find 'thunk to' then return end
+	if s:find '^_%u' or s:find '^__libc' then return end
+	if s:lower():find '^gomp_' or s:find '^goacc_' then return end
+	if s:find '^__cxa' or s:find '^__cxxabi' then return end
+	if s == '_fini' or s == '_init' or s == '_start' then return end
+	if s == '__stat' or s:find '^_compat' then return end
+	if s == 'omp_set_num_threads' then return end
 	return true
 end
 
@@ -25,19 +30,58 @@ local function stripsym(s)
 		local bits = {}
 		if s:match '^_ZNSt' then bits[#bits+1] = 'std' end
 		local start,fin = s:find '%d+'
+		if not start then
+			return
+		end
 		repeat
 			local cnt = tonumber(s:sub(start,fin), 10)
 			bits[#bits+1] = s:sub(fin+1,fin+cnt)
 			start,fin = s:find('^%d+', fin+cnt+1)
 		until not start
-		s = table.concat(bits, '::')..' ???'
-	else
+		s = table.concat(bits, '::')
+	elseif s:find 'thunk to' or s:find 'guard variable' then return
+	elseif s:find 'typeinfo ?n?a?m?e? for' then return
+	elseif s:find 'vtable for' then return
+	elseif not s:find 'decltype' then
+		local o = s
+		-- First condense the difficult syntactic components
 		s = s:gsub('%s+', ' '):gsub('^ ', ''):gsub(' $', '')
-		s = s:gsub('\'%d+$', '')
-		s = s:gsub('const$', ''):gsub('%[.+%]', '')
-		s = s:gsub('%b<>', '<>')
-		s = s:reverse():gsub('%b)(', ')...(', 1):reverse()
-		s = s:gsub('^.+ ', '')
+		s = s:gsub('%b<>', '')
+		s = s:gsub('%b()', function(m)
+			if #m == 2 then return '()'
+			elseif m == '(anonymous namespace)' then
+				return '(anonymous)'
+			else return '(...)' end
+		end)
+		s = s:gsub('%s+', ' '):gsub('^ ', ''):gsub(' $', '')
+
+		-- Take off versioning symbol things
+		s = s:gsub("'%d+", ''):gsub('@%S+', '')
+		s = s:gsub('%[[^]]+%]', '')
+
+		-- C++ operator syntax is confusing
+		s = s:gsub('operator[^(]+%(', function(m)
+			return m:gsub('%s+', '~')
+		end)
+
+		local x = s
+
+		-- Now find the most important "word" of the symbol
+		if s:find '%)' then
+			local ss = s
+			s = nil
+			for w in ss:gmatch '%S+' do
+				if w:find '%(%.?%.?%.?%)' then s = w end
+			end
+			if not s then
+				s = ss
+			elseif not s:find '%(%.?%.?%.?%)$' then
+				assert(s:find '%(%.?%.?%.?%)::%S+$', s)
+				s = nil
+			else
+				s = s:gsub('%(%.?%.?%.?%)$', '')
+			end
+		end
 	end
 	return s
 end
@@ -73,7 +117,7 @@ for _,inf in ipairs(args) do
 		end
 		sym = stripsym(sym)
 
-		if dowecare(src) and dowecaresym(sym) then
+		if sym and dowecare(src) and dowecaresym(sym) then
 			if obj then
 				data[obj] = data[obj] or {}
 				data[obj][sym] = true
@@ -108,7 +152,7 @@ for obj in pairs(data) do
 			error('Failed nm match: '..l)
 		end
 		sym = stripsym(sym)
-		if (ty == 't' or ty == 'T') and dowecaresym(sym) then
+		if sym and (ty == 't' or ty == 'T') and dowecaresym(sym) then
 			ss[sym] = true
 		end
 	end
