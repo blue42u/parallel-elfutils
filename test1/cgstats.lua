@@ -16,7 +16,7 @@ until seps == 0
 local function dowecare(s)
 	if s == '???' then return end
 	if s:sub(1,1) == '/' then
-		if s:match '^/projects' then
+		if s:match '^/projects' and s:match '/parallel%-elfutils/' then
 			return dowecare(s:match '/parallel%-elfutils/(.+)')
 		else return end
 	end
