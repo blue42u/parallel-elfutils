@@ -427,7 +427,7 @@ main(int argc, char **argv)
 	funcVec.push_back(func);
     }
 
-#pragma omp parallel for num_threads(opts.num_threads) schedule(static,1) ordered
+#pragma omp parallel for schedule(static,1) ordered
     for (size_t n = 0; n < funcVec.size(); n++) {
 	ParseAPI::Function * func = funcVec[n];
 	doFunction(func);

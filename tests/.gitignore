@@ -1,0 +1,8 @@
+errors.*
+**/errors.*
+output.*
+**/output.*
+
+test1/main
+input1/input
+unstrip/

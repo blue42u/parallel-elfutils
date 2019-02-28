@@ -13,13 +13,13 @@
   tbb: scalable_aligned_malloc
   Helgrind:Race
   ...
-  fun:scalable_aligned_malloc
+  fun:scalable_*malloc
 }
 {
   tbb: scalable_aligned_malloc
   drd:ConflictingAccess
   ...
-  fun:scalable_aligned_malloc
+  fun:scalable_*malloc
 }
 
 {
