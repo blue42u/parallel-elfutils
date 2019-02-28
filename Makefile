@@ -17,7 +17,7 @@ build: elfutils-build dyninst-build
 INST = $(shell pwd)/install
 XFLAGS = -O0 -g
 
-download: boost valgrind elfutils dyninst
+download: boost valgrind elfutils-dl dyninst-dl
 
 #----------------------------------------------------------------------------
 # dyninst test harness for detecting races caused by libdw in elfutils
@@ -33,8 +33,9 @@ last:
 # dyninst
 #----------------------------------------------------------------------------
 
-dyninst:
-	git submodule update --init dyninst
+dyninst-dl:
+	@if [ ! -e dyninst/CMakeLists.txt ]; then \
+		git submodule update --init dyninst; fi
 
 dyninst-build: boost dyninst
 	@mkdir -p build/dyninst install/dyninst
@@ -92,8 +93,9 @@ valgrind: boost
 # elfutils
 #----------------------------------------------------------------------------
 
-elfutils:
-	git submodule update --init elfutils
+elfutils-dl:
+	@if [ ! -e elfutils/configure.ac ]; then \
+		git submodule update --init elfutils; fi
 
 elfutils-build: elfutils
 	@mkdir -p build/elfutils install/elfutils
