@@ -11,6 +11,13 @@ local function dowecare(s)
 	return true
 end
 
+-- Do we care about stuff from library X?
+local function dowecareobj(o)
+	if not o then return true end
+	if o:find 'install/gcc' then return end
+	return true
+end
+
 -- Do we care about this symbol?
 local function dowecaresym(s)
 	local skipns = {std=true, __gnu_cxx=true, boost=true, tbb=true}
@@ -117,7 +124,7 @@ for _,inf in ipairs(args) do
 		end
 		sym = stripsym(sym)
 
-		if sym and dowecare(src) and dowecaresym(sym) then
+		if sym and dowecare(src) and dowecareobj(obj) and dowecaresym(sym) then
 			if obj then
 				data[obj] = data[obj] or {}
 				data[obj][sym] = true

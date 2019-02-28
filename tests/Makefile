@@ -66,8 +66,9 @@ output = $(dir $(1))output.$(notdir $(1)).$(subst /,_,$(2)).$(3)
 errors.%: $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call errors,$(t),$(i),%)))
 	cat $^ > $@
 
-errors.coverage: $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call output,$(t),$(i),callgrind)))
-	lua cgstats.lua $^ $@
+errors.coverage: cgstats.lua \
+	$(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call output,$(t),$(i),callgrind)))
+	lua cgstats.lua $(filter-out cgstats.lua,$^) $@
 
 ### Valgrind Testing Machinery
 
