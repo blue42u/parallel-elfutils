@@ -1,17 +1,4 @@
--- Pop open a callgrind_annotate instance, assuming its where we think it is
-local inf,outf = ...
-outf = assert(io.open(outf, 'w'))
-local cg = io.popen('../install/valgrind/bin/callgrind_annotate '
-	..'--threshold=100 '..inf, 'r')
-
--- Skip over the header data first
--- Separater starts with '---'
-local seps = 6
-repeat
-	local l = cg:read '*l'
-	if l:sub(1,3) == '---' then seps = seps - 1 end
-until seps == 0
-
+--- Settings for the symbol system
 -- Do we care about stuff from source file X?
 local function dowecare(s)
 	if s == '???' then return end
@@ -55,32 +42,49 @@ local function stripsym(s)
 	return s
 end
 
--- Now read in the lovely data
+local args = {...}
+local outf = table.remove(args)
 local data,skipped = {},{}
-for l in cg:lines() do
-	if #l == 0 then break end
-	local cnt,src,sym = l:match '^%s*([%d,]+)%s+([^%s:]+):(.+)$'
-	assert(cnt, "Invalid match on "..l)
+for _,inf in ipairs(args) do
+	-- Pop open a callgrind_annotate instance, assuming its where we think it is
+	local cg = io.popen('../install/valgrind/bin/callgrind_annotate '
+		..'--threshold=100 '..inf, 'r')
 
-	cnt = assert(tonumber(cnt:gsub(',',''), 10))
-	assert(cnt > 0)
+	-- Skip over the header data first
+	-- Separater starts with '---'
+	local seps = 6
+	repeat
+		local l = cg:read '*l'
+		if l:sub(1,3) == '---' then seps = seps - 1 end
+	until seps == 0
 
-	local obj
-	if sym:sub(-1) == ']' then
-		sym,obj = sym:match '^(.+)%s+%[(.-)%]$'
-	end
-	sym = stripsym(sym)
+	-- Now read in the lovely data
+	for l in cg:lines() do
+		if #l == 0 then break end
+		local cnt,src,sym = l:match '^%s*([%d,]+)%s+([^%s:]+):(.+)$'
+		assert(cnt, "Invalid match on "..l)
 
-	if dowecare(src) and dowecaresym(sym) then
-		if obj then
-			data[obj] = data[obj] or {}
-			data[obj][sym] = true
-		else
-			skipped[sym] = true
+		cnt = assert(tonumber(cnt:gsub(',',''), 10))
+		assert(cnt > 0)
+
+		local obj
+		if sym:sub(-1) == ']' then
+			sym,obj = sym:match '^(.+)%s+%[(.-)%]$'
+		end
+		sym = stripsym(sym)
+
+		if dowecare(src) and dowecaresym(sym) then
+			if obj then
+				data[obj] = data[obj] or {}
+				data[obj][sym] = true
+			else
+				skipped[sym] = true
+			end
 		end
 	end
+	assert(cg:close())
 end
-assert(cg:close())
+outf = assert(io.open(outf, 'w'))
 
 -- Pre-process the skipped symbol list
 do
