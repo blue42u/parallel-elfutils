@@ -6,6 +6,13 @@ all: download build check
 
 build: elfutils-build dyninst-build
 
+dl:
+	@if [ ! -e dyninst/CMakeLists.txt ]; then \
+		git submodule update --init dyninst; fi
+	@if [ ! -e elfutils/configure.ac ]; then \
+		git submodule update --init elfutils; fi
+
+
 #----------------------------------------------------------------------------
 # download valgrind, elfutils, boost, and dyninst
 #
@@ -33,11 +40,7 @@ last:
 # dyninst
 #----------------------------------------------------------------------------
 
-dyninst-dl:
-	@if [ ! -e dyninst/CMakeLists.txt ]; then \
-		git submodule update --init dyninst; fi
-
-dyninst-build: boost gcc elfutils-build dyninst-dl
+dyninst-build: dl boost gcc elfutils-build
 	@mkdir -p build/dyninst install/dyninst
 	@cd build/dyninst && if [ ! -e Makefile ]; then cmake \
 		-DCMAKE_CXX_FLAGS="$(XFLAGS)" -DCMAKE_C_FLAGS="$(XFLAGS)" \
@@ -114,11 +117,7 @@ gcc:
 # elfutils
 #----------------------------------------------------------------------------
 
-elfutils-dl:
-	@if [ ! -e elfutils/configure.ac ]; then \
-		git submodule update --init elfutils; fi
-
-elfutils-build: elfutils-dl
+elfutils-build: dl
 	@mkdir -p build/elfutils install/elfutils
 	@cd elfutils && if [ ! -e config/missing ]; then \
 		autoreconf -i; fi
