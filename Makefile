@@ -37,7 +37,7 @@ dyninst-dl:
 	@if [ ! -e dyninst/CMakeLists.txt ]; then \
 		git submodule update --init dyninst; fi
 
-dyninst-build: boost gcc elfutils-build dyninst
+dyninst-build: boost gcc elfutils-build dyninst-dl
 	@mkdir -p build/dyninst install/dyninst
 	@cd build/dyninst && if [ ! -e Makefile ]; then cmake \
 		-DCMAKE_CXX_FLAGS="$(XFLAGS)" -DCMAKE_C_FLAGS="$(XFLAGS)" \
@@ -63,7 +63,7 @@ boost:
 	cd download && wget --no-check-certificate -N http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.zip
 	unzip -qo download/boost_1_61_0.zip
 	mv boost_1_61_0 boost
-	cd boost && ./bootstrap.sh --with-toolset=intel-linux
+	cd boost && ./bootstrap.sh
 	cd boost && ./b2 \
 		--with-system \
 		--with-thread \
@@ -118,13 +118,12 @@ elfutils-dl:
 	@if [ ! -e elfutils/configure.ac ]; then \
 		git submodule update --init elfutils; fi
 
-elfutils-build: elfutils
+elfutils-build: elfutils-dl
 	@mkdir -p build/elfutils install/elfutils
 	@cd elfutils && if [ ! -e config/missing ]; then \
 		autoreconf -i; fi
 	@cd build/elfutils && if [ ! -e Makefile ]; then \
 		../../elfutils/configure \
-			--enable-maintainer-mode \
 			--prefix=$(INST)/elfutils \
 			CFLAGS="$(XFLAGS)" \
 			INSTALL="$(shell which install) -C"; fi
