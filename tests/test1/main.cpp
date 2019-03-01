@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2017-2018, Rice University.
+//  Copyright (c) 2017, Rice University.
 //  All rights reserved.
 //
 //  Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
 //
 // ----------------------------------------------------------------------
 //
-//  This program is a proxy for hpcstruct with openmp threads.
+//  This program is a proxy for hpcstruct with threads.
 //
 //  Iterate through the same hierarchy of functions, loops, blocks,
 //  instructions, inline call sequences and line map info, and collect
@@ -40,44 +40,29 @@
 //  for each function.
 //
 //  This program tests that ParseAPI and SymtabAPI can be run in
-//  parallel with openmp threads.  There are now two parallel phases:
-//  parse() a CodeObject inside ParseAPI, and the doFunction() loop as
-//  a proxy for hpcstruct queries.
+//  parallel.  For now, we parse the entire binary sequentially (unless
+//  ParseAPI is built with threads) and then make parallel queries.
 //
-//  Use scripts from github.com/mwkrentel/myrepo to build me.
+//  Build me as:
+//  ./mk-dyninst.sh  cilk-parse.cpp  externals-dir
 //
 //  Usage:
-//  ./openmp-parse  [options] ...  filename
+//  ./cilk-parse  [options]...  filename  [ num-threads ]
 //
 //  Options:
-//   -j  num      use <num> openmp threads
-//   -jp num      use <num> threads for ParseAPI::parse()
-//   -js num      use <num> threads for Symtab methods
-//   -p, -v       print verbose function information
-//   -D           disable delete CodeObject and Symtab CodeSource
-//   -M           disable read() file in memory before openFile()
 //   -I, -Iall    do not split basic blocks into instructions
 //   -Iinline     do not compute inline callsite sequences
 //   -Iline       do not compute line map info
-//   -h, --help   display usage message and exit
+//   -q           don't acutally print anything
 //
 
-#define MY_USE_OPENMP  1
-
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <err.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-
-#if MY_USE_OPENMP
-#include <omp.h>
-#endif
 
 #include <iostream>
 #include <map>
@@ -94,7 +79,10 @@
 #include <Instruction.h>
 #include <LineInformation.h>
 
+#include <omp.h>
+
 #define MAX_VMA  0xfffffffffffffff0
+#define DEFAULT_THREADS  4
 
 using namespace Dyninst;
 using namespace ParseAPI;
@@ -106,33 +94,24 @@ typedef map <Block *, bool> BlockSet;
 typedef unsigned int uint;
 
 Symtab * the_symtab = NULL;
-mutex mtx;
 
 // Command-line options
 class Options {
 public:
     const char *filename;
-    int   jobs;
-    int   jobs_parse;
-    int   jobs_symtab;
-    bool  verbose;
-    bool  do_delete;
-    bool  do_memory;
+    int   num_threads;
     bool  do_instns;
     bool  do_inline;
     bool  do_linemap;
+    bool  do_prints;
 
     Options() {
 	filename = NULL;
-	jobs = -1;
-	jobs_parse = -1;
-	jobs_symtab = -1;
-	verbose = false;
-	do_delete = true;
-	do_memory = true;
+	num_threads = 0;
 	do_instns = true;
 	do_inline = true;
 	do_linemap = true;
+        do_prints = true;
     }
 };
 
@@ -248,7 +227,7 @@ doBlock(Block * block, BlockSet & visited, FuncInfo & finfo)
 
     // split basic block into instructions (optional)
     if (opts.do_instns) {
- 	Dyninst::ParseAPI::Block::Insns imap;
+	map <Offset, Instruction> imap;
 	block->getInsns(imap);
 
 	for (auto iit = imap.begin(); iit != imap.end(); ++iit) {
@@ -326,109 +305,46 @@ doFunction(ParseAPI::Function * func)
 	}
     }
 
-    if (opts.verbose) {
-      // print info for this function
-      mtx.lock();
-
-      cout << "\n--------------------------------------------------\n"
-	   << hex
-	   << "func:  0x" << finfo.addr << "  " << finfo.name << "\n"
-	   << "0x" << finfo.min_vma << "--0x" << finfo.max_vma << "\n"
-	   << dec
-	   << "loops:  " << finfo.num_loops
-	   << "  blocks:  " << finfo.num_blocks
-	   << "  instns:  " << finfo.num_instns << "\n"
-	   << "inline depth:  " << finfo.max_depth
-	   << "  line range:  " << finfo.min_line << "--" << finfo.max_line
-	   << "\n";
-
-      mtx.unlock();
-    }
+    // print info for this function
+    if(opts.do_prints)
+        #pragma omp ordered
+        cout << "\n--------------------------------------------------\n"
+	     << hex
+	     << "func:  0x" << finfo.addr << "  " << finfo.name << "\n"
+	     << "0x" << finfo.min_vma << "--0x" << finfo.max_vma << "\n"
+	     << dec
+	     << "loops:  " << finfo.num_loops
+	     << "  blocks:  " << finfo.num_blocks
+	     << "  instns:  " << finfo.num_instns << "\n"
+	     << "inline depth:  " << finfo.max_depth
+	     << "  line range:  " << finfo.min_line << "--" << finfo.max_line
+	     << "\n";
 }
 
 //----------------------------------------------------------------------
 
-void
-usage(string mesg)
-{
-    if (! mesg.empty()) {
-	cout << "error: " << mesg << "\n\n";
-    }
+const std::string usageMessage = 
+    "usage: cilk-parse [options]... filename [num-threads]\n\n"
+    "options:\n"
+    "  -I, -Iall    do not split basic blocks into instructions\n"
+    "  -Iinline     do not compute inline callsite sequences\n"
+    "  -Iline       do not compute line map info\n"
+    "  -q           don't actually print anything\n"
+    "\n";
 
-    cout << "usage:  openmp-parse  [options]...  filename\n\n"
-	 << "options:\n"
-	 << "  -j  num      use num openmp threads\n"
-	 << "  -jp num      use num threads for ParseAPI::parse()\n"
-	 << "  -p, -v       print verbose function information\n"
-	 << "  -D           disable delete CodeObject and Sybtab CodeSource\n"
-	 << "  -M           dsable read() file in memory before openFile\n"
-	 << "  -I, -Iall    do not split basic blocks into instructions\n"
-	 << "  -Iinline     do not compute inline callsite sequences\n"
-	 << "  -Iline       do not compute line map info\n"
-	 << "  -h, --help   display usage message and exit\n"
-	 << "\n";
-
-    exit(1);
-}
-
-// Command-line:  [options] ...  filename
 void
 getOptions(int argc, char **argv, Options & opts)
 {
     if (argc < 2) {
-	usage("");
+        cerr << usageMessage;
+        exit(1);
     }
 
     int n = 1;
     while (n < argc) {
 	string arg(argv[n]);
 
-	if (arg == "-h" || arg == "-help" || arg == "--help") {
-	    usage("");
-	}
-	else if (arg == "-j") {
-	    if (n + 1 >= argc) {
-	        usage("missing arg for -j");
-	    }
-	    opts.jobs = atoi(argv[n + 1]);
-	    if (opts.jobs <= 0) {
-	        errx(1, "bad arg for -j: %s", argv[n + 1]);
-	    }
-	    n += 2;
-	}
-	else if (arg == "-jp") {
-	    if (n + 1 >= argc) {
-	        usage("missing arg for -jp");
-	    }
-	    opts.jobs_parse = atoi(argv[n + 1]);
-	    if (opts.jobs_parse <= 0) {
-	        errx(1, "bad arg for -jp: %s", argv[n + 1]);
-	    }
-	    n += 2;
-	}
-	else if (arg == "-js") {
-	    if (n + 1 >= argc) {
-	        usage("missing arg for -js");
-	    }
-	    opts.jobs_symtab = atoi(argv[n + 1]);
-	    if (opts.jobs_symtab <= 0) {
-	        errx(1, "bad arg for -js: %s", argv[n + 1]);
-	    }
-	    n += 2;
-	}
-	else if (arg == "-p" || arg == "-v") {
-	    opts.verbose = true;
-	    n++;
-	}
-	else if (arg == "-D") {
-	    opts.do_delete = false;
-	    n++;
-	}
-	else if (arg == "-M") {
-	    opts.do_memory = false;
-	    n++;
-	}
-	else if (arg == "-I" || arg == "-Iall") {
+	if (arg == "-I" || arg == "-Iall") {
 	    opts.do_instns = false;
 	    n++;
 	}
@@ -440,8 +356,13 @@ getOptions(int argc, char **argv, Options & opts)
 	    opts.do_linemap = false;
 	    n++;
 	}
+        else if (arg == "-q") {
+            opts.do_prints = false;
+            n++;
+        }
 	else if (arg[0] == '-') {
-	    usage("invalid option: " + arg);
+	    cerr << "invalid option: " << arg << "\n" << usageMessage;
+            exit(1);
 	}
 	else {
 	    break;
@@ -453,45 +374,21 @@ getOptions(int argc, char **argv, Options & opts)
 	opts.filename = argv[n];
     }
     else {
-	usage("missing file name");
+	cerr << "missing file name\n" << usageMessage;
     }
+    n++;
 
-#if MY_USE_OPENMP
-    // if -j is not specified, then ask the runtime library.
-    if (opts.jobs < 1) {
-        opts.jobs = omp_get_max_threads();
+    // num threads (optional)
+    if (n < argc) {
+	opts.num_threads = atoi(argv[n]);
     }
-
-    // if -jp is not specified, then use -j for both.
-    if (opts.jobs_parse < 1) {
-        opts.jobs_parse = opts.jobs;
+    else {
+	opts.num_threads = DEFAULT_THREADS;
     }
-
-    // if -js is not specified, then use -jp
-    if (opts.jobs_symtab < 1) {
-	opts.jobs_symtab = opts.jobs_parse;
+    if (opts.num_threads <= 0) {
+        cerr << "bad argument for num_threads\n" << usageMessage;
+        exit(1);
     }
-#else
-    opts.jobs = 1;
-    opts.jobs_parse = 1;
-    opts.jobs_symtab = 1;
-#endif
-}
-
-//----------------------------------------------------------------------
-
-void
-printTime(const char *label, struct timeval *tv_prev, struct timeval *tv_now,
-	  struct rusage *ru_prev, struct rusage *ru_now)
-{
-    float delta = (float)(tv_now->tv_sec - tv_prev->tv_sec)
-	+ ((float)(tv_now->tv_usec - tv_prev->tv_usec))/1000000.0;
-
-    printf("%s  %8.1f sec  %8ld meg  %8ld meg", label, delta,
-	   (ru_now->ru_maxrss - ru_prev->ru_maxrss)/1024,
-	   ru_now->ru_maxrss/1024);
-
-    cout << endl;
 }
 
 //----------------------------------------------------------------------
@@ -499,103 +396,27 @@ printTime(const char *label, struct timeval *tv_prev, struct timeval *tv_now,
 int
 main(int argc, char **argv)
 {
-    struct timeval tv_init, tv_symtab, tv_parse, tv_fini;
-    struct rusage  ru_init, ru_symtab, ru_parse, ru_fini;
-
     getOptions(argc, argv, opts);
+    omp_set_num_threads(opts.num_threads);
 
-    cout << "begin open: " << opts.filename << "\n"
-	 << "symtab threads: " << opts.jobs_symtab
-	 << "  parse threads: " << opts.jobs_parse
-	 << "  struct threads: " << opts.jobs << "\n" << endl;
-
-    gettimeofday(&tv_init, NULL);
-    getrusage(RUSAGE_SELF, &ru_init);
-    printTime("init:  ", &tv_init, &tv_init, &ru_init, &ru_init);
-
-#if MY_USE_OPENMP
-    omp_set_num_threads(opts.jobs_symtab);
-#endif
-
-    char * mem_image = NULL;
-
-    if (opts.do_memory) {
-	//
-	// read filename into memory and pass to Symtab as a memory
-	// buffer.  this is what hpcstruct does.
-	//
-	int fd = open(opts.filename, O_RDONLY);
-	if (fd < 0) {
-	    err(1, "unable to open: %s", opts.filename);
-	}
-
-	struct stat sb;
-	int ret = fstat(fd, &sb);
-	if (ret != 0) {
-	    err(1, "unable to fstat: %s", opts.filename);
-	}
-	size_t file_size = sb.st_size;
-
-	mem_image = (char *) malloc(file_size);
-	if (mem_image == NULL) {
-	    err(1, "unable to malloc %ld bytes", file_size);
-	}
-
-	ssize_t len = read(fd, mem_image, file_size);
-	if (len < file_size) {
-	    err(1, "read only %ld out of %ld bytes", len, file_size);
-	}
-	close(fd);
-
-	if (! Symtab::openFile(the_symtab, mem_image, file_size, opts.filename)) {
-	    errx(1, "Symtab::openFile (in memory) failed: %s", opts.filename);
-	}
+    if (! Symtab::openFile(the_symtab, opts.filename)) {
+	errx(1, "Symtab::openFile failed: %s", opts.filename);
     }
-    else {
-	//
-	// let Symtab read the file itself (-M option).
-	//
-	if (! Symtab::openFile(the_symtab, opts.filename)) {
-	    errx(1, "Symtab::openFile (on disk) failed: %s", opts.filename);
-	}
-    }
-
     the_symtab->parseTypesNow();
     the_symtab->parseFunctionRanges();
 
     vector <Module *> modVec;
     the_symtab->getAllModules(modVec);
 
-#pragma omp parallel  shared(modVec)
-    {
-#pragma omp for  schedule(dynamic, 1)
-      for (uint i = 0; i < modVec.size(); i++) {
-	  modVec[i]->parseLineInformation();
-      }
-    }  // end parallel
-
-    gettimeofday(&tv_symtab, NULL);
-    getrusage(RUSAGE_SELF, &ru_symtab);
-    printTime("symtab:", &tv_init, &tv_symtab, &ru_init, &ru_symtab);
-
-#if MY_USE_OPENMP
-    omp_set_num_threads(opts.jobs_parse);
-#endif
+    for (auto mit = modVec.begin(); mit != modVec.end(); ++mit) {
+	(*mit)->parseLineInformation();
+    }
 
     SymtabCodeSource * code_src = new SymtabCodeSource(the_symtab);
     CodeObject * code_obj = new CodeObject(code_src);
-
     code_obj->parse();
 
-    gettimeofday(&tv_parse, NULL);
-    getrusage(RUSAGE_SELF, &ru_parse);
-    printTime("parse: ", &tv_symtab, &tv_parse, &ru_symtab, &ru_parse);
-
-#if MY_USE_OPENMP
-    omp_set_num_threads(opts.jobs);
-#endif
-
-    // get function list and convert to vector.  cilk_for requires a
+    // get function list and convert to vector. parallel for requires a
     // random access container.
 
     const CodeObject::funclist & funcList = code_obj->funcs();
@@ -606,47 +427,15 @@ main(int argc, char **argv)
 	funcVec.push_back(func);
     }
 
-#pragma omp parallel  shared(funcVec)
-    {
-#pragma omp for  schedule(dynamic, 1)
-      for (long n = 0; n < funcVec.size(); n++) {
-	  ParseAPI::Function * func = funcVec[n];
-	  doFunction(func);
-      }
-    }  // end parallel
-
-    if (opts.do_delete) {
-	if (opts.verbose) {
-	    cout << "\ndelete CodeObject, CodeSource, close Symtab ..." << endl;
-	}
-	delete code_obj;
-	delete code_src;
-	Symtab::closeSymtab(the_symtab);
-	if (opts.do_memory) {
-	    free(mem_image);
-	}
+#pragma omp parallel for schedule(static,1) ordered
+    for (size_t n = 0; n < funcVec.size(); n++) {
+	ParseAPI::Function * func = funcVec[n];
+	doFunction(func);
     }
 
-    gettimeofday(&tv_fini, NULL);
-    getrusage(RUSAGE_SELF, &ru_fini);
-    if (! opts.verbose) {
-	printTime("struct:", &tv_parse, &tv_fini, &ru_parse, &ru_fini);
-	printTime("total: ", &tv_init, &tv_fini, &ru_init, &ru_fini);
-    }
-
-    cout << "\ndone parsing: " << opts.filename << "\n"
-	 << "num threads: " << opts.jobs_symtab
-	 << ", " << opts.jobs_parse << ", " << opts.jobs
-	 << "  num funcs: " << funcVec.size() << "\n" << endl;
-
-    if (opts.verbose) {
-	printTime("init:  ", &tv_init, &tv_init, &ru_init, &ru_init);
-	printTime("symtab:", &tv_init, &tv_symtab, &ru_init, &ru_symtab);
-	printTime("parse: ", &tv_symtab, &tv_parse, &ru_symtab, &ru_parse);
-	printTime("struct:", &tv_parse, &tv_fini, &ru_parse, &ru_fini);
-	printTime("total: ", &tv_init, &tv_fini, &ru_init, &ru_fini);
-	cout << endl;
-    }
+    if(opts.do_prints)
+        cout << "\ndone parsing: " << opts.filename << "\n"
+	     << "  num funcs: " << funcVec.size() << "\n\n";
 
     return 0;
 }

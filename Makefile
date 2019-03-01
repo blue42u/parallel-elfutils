@@ -17,17 +17,17 @@ build: elfutils-build dyninst-build
 INST = $(shell pwd)/install
 XFLAGS = -O0 -g
 
-download: boost valgrind elfutils-dl dyninst-dl
+download: gcc boost valgrind elfutils-dl dyninst-dl
 
 #----------------------------------------------------------------------------
 # dyninst test harness for detecting races caused by libdw in elfutils
 #----------------------------------------------------------------------------
 
-check: dyninst-build
-	$(MAKE) -C test1
+check: dyninst-build valgrind
+	$(MAKE) -C tests
 
 last:
-	$(MAKE) -C test1 last
+	$(MAKE) -C tests last
 
 #----------------------------------------------------------------------------
 # dyninst
@@ -37,17 +37,19 @@ dyninst-dl:
 	@if [ ! -e dyninst/CMakeLists.txt ]; then \
 		git submodule update --init dyninst; fi
 
-dyninst-build: boost dyninst
+dyninst-build: boost gcc elfutils-build dyninst
 	@mkdir -p build/dyninst install/dyninst
 	@cd build/dyninst && if [ ! -e Makefile ]; then cmake \
 		-DCMAKE_CXX_FLAGS="$(XFLAGS)" -DCMAKE_C_FLAGS="$(XFLAGS)" \
-	        -DBOOST_ROOT=$(INST)/boost -DPATH_BOOST=$(INST)/boost \
+		-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$(INST)/boost -DBoost_NO_SYSTEM_PATHS=ON \
+		-DBoost_INCLUDE_DIR=$(INST)/boost/include -DBoost_LIBRARY_DIR=$(INST)/boost/lib \
 		-DCMAKE_INSTALL_PREFIX=$(INST)/dyninst \
 		-DCMAKE_CXX_FLAGS="-DENABLE_VG_ANNOTATIONS" \
 		-DLIBELF_INCLUDE_DIR=$(INST)/elfutils/include \
 		-DLIBELF_LIBRARIES=$(INST)/elfutils/lib/libelf.so \
 		-DLIBDWARF_INCLUDE_DIR=$(INST)/elfutils/include \
 		-DLIBDWARF_LIBRARIES=$(INST)/elfutils/lib/libdw.so \
+		-DIBERTY_LIBRARIES=$(INST)/gcc/lib64/libiberty.a \
 		-DCMAKE_BUILD_TYPE=Debug \
 		../../dyninst; fi
 	$(MAKE) -j -C build/dyninst install
@@ -88,6 +90,25 @@ valgrind: boost
 	cd valgrind && CPPFLAGS="-I$(INST)/boost/include -L$(INST)/boost/lib" \
 		./configure --prefix=$(INST)/valgrind
 	cd valgrind && $(MAKE) -j install
+
+#----------------------------------------------------------------------------
+# GCC (really just libgomp)
+#----------------------------------------------------------------------------
+
+gcc:
+	@mkdir -p install/gcc download/
+	cd download && wget -N ftp://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-6.4.0/gcc-6.4.0.tar.xz
+	tar xJf download/gcc-6.4.0.tar.xz
+	mv gcc-6.4.0 gcc
+	cd gcc && ./contrib/download_prerequisites
+	cd gcc && CPPFLAGS='-g' ./configure \
+		--prefix=$(INST)/gcc --disable-linux-futex --disable-multilib \
+		--disable-bootstrap --disable-libquadmath \
+		--disable-gcov --disable-libada --disable-libsanitizer \
+		--disable-libssp --disable-libquadmath-support \
+		--disable-libvtv --enable-install-libiberty
+	cd gcc && $(MAKE) -j
+	cd gcc && $(MAKE) -j install
 
 #----------------------------------------------------------------------------
 # elfutils

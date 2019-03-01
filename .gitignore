@@ -3,3 +3,4 @@ valgrind/
 build/
 install/
 download/
+gcc/
