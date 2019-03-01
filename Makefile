@@ -23,7 +23,7 @@ download: gcc boost valgrind elfutils dyninst
 # dyninst test harness for detecting races caused by libdw in elfutils
 #----------------------------------------------------------------------------
 
-check: dyninst-build
+check: dyninst-build valgrind
 	$(MAKE) -C tests
 
 last:
@@ -36,17 +36,19 @@ last:
 dyninst:
 	git submodule update --init dyninst
 
-dyninst-build: boost dyninst
+dyninst-build: boost gcc elfutils-build dyninst
 	@mkdir -p build/dyninst install/dyninst
 	@cd build/dyninst && if [ ! -e Makefile ]; then cmake \
 		-DCMAKE_CXX_FLAGS="$(XFLAGS)" -DCMAKE_C_FLAGS="$(XFLAGS)" \
-	        -DBOOST_ROOT=$(INST)/boost -DPATH_BOOST=$(INST)/boost \
+		-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$(INST)/boost -DBoost_NO_SYSTEM_PATHS=ON \
+		-DBoost_INCLUDE_DIR=$(INST)/boost/include -DBoost_LIBRARY_DIR=$(INST)/boost/lib \
 		-DCMAKE_INSTALL_PREFIX=$(INST)/dyninst \
 		-DCMAKE_CXX_FLAGS="-DENABLE_VG_ANNOTATIONS" \
 		-DLIBELF_INCLUDE_DIR=$(INST)/elfutils/include \
 		-DLIBELF_LIBRARIES=$(INST)/elfutils/lib/libelf.so \
 		-DLIBDWARF_INCLUDE_DIR=$(INST)/elfutils/include \
 		-DLIBDWARF_LIBRARIES=$(INST)/elfutils/lib/libdw.so \
+		-DIBERTY_LIBRARIES=$(INST)/gcc/lib64/libiberty.a \
 		-DCMAKE_BUILD_TYPE=Debug \
 		../../dyninst; fi
 	$(MAKE) -j -C build/dyninst install
@@ -102,7 +104,8 @@ gcc:
 		--prefix=$(INST)/gcc --disable-linux-futex --disable-multilib \
 		--disable-bootstrap --disable-libquadmath \
 		--disable-gcov --disable-libada --disable-libsanitizer \
-		--disable-libssp --disable-libquadmath-support --disable-libvtv
+		--disable-libssp --disable-libquadmath-support \
+		--disable-libvtv --enable-install-libiberty
 	cd gcc && $(MAKE) -j
 	cd gcc && $(MAKE) -j install
 
