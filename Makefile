@@ -119,6 +119,7 @@ elfutils-build: dl
 		autoreconf -i; fi
 	@cd build/elfutils && if [ ! -e Makefile ]; then \
 		../../elfutils/configure \
+			--enable-maintainer-mode \
 			--prefix=$(INST)/elfutils \
 			CFLAGS="$(XFLAGS)" \
 			INSTALL="$(shell which install) -C"; fi
