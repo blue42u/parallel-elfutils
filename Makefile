@@ -2,9 +2,7 @@
 # get everything downloaded and built for the first time
 #----------------------------------------------------------------------------
 
-all: download build check
-
-build: elfutils-build dyninst-build
+all: check
 
 dl:
 	@if [ ! -e dyninst/CMakeLists.txt ]; then \
@@ -23,8 +21,6 @@ dl:
 
 INST = $(shell pwd)/install
 XFLAGS = -O0 -g
-
-download: gcc boost valgrind elfutils-dl dyninst-dl
 
 #----------------------------------------------------------------------------
 # dyninst test harness for detecting races caused by libdw in elfutils
@@ -95,7 +91,7 @@ valgrind: boost
 	cd valgrind && $(MAKE) -j install
 
 #----------------------------------------------------------------------------
-# GCC (really just libgomp)
+# GCC (debugging GOMP and libiberty)
 #----------------------------------------------------------------------------
 
 gcc:
