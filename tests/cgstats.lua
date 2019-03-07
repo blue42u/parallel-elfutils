@@ -99,7 +99,7 @@ local data,skipped = {},{}
 for _,inf in ipairs(args) do
 	-- Pop open a callgrind_annotate instance, assuming its where we think it is
 	local cg = io.popen('../install/valgrind/bin/callgrind_annotate '
-		..'--threshold=100 '..inf, 'r')
+		..'--threshold=100 --show=Ir '..inf, 'r')
 
 	-- Skip over the header data first
 	-- Separater starts with '---'

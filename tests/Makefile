@@ -25,6 +25,11 @@ INPUTS += input1/input
 input1/input: input1/main.c input1/print.c
 	cc $(CFLAGS) -Wall -g -o $@ $^
 
+INPUTS += biginputs/libasm.so
+biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
+	@mkdir -p biginputs
+	ln -sf $< $@
+
 ### Individual test specifications
 
 CFLAGS += -Wall -g -O0
@@ -78,11 +83,13 @@ VALTOOLS=memcheck helgrind drd callgrind cachegrind massif
 VFLAGS += --tool=$(v) --log-file=$(call errors,$(t),$(i),$(v))
 VOUT_callgrind = --callgrind-out-file=$(call output,$(t),$(i),$(v))
 
+VFLAGS_callgrind = --collect-jumps=yes --collect-bus=yes
+
 define valgrind
 $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
 		$(t) $(i) $(GLOBALDEPS)
 	OMP_NUM_THREADS=30 $(VAL) $(VFLAGS) $(VFLAGS_$(v)) $(VOUT_$(v)) \
-		$(call $(t),$(i)) > /dev/null
+		$(call $(t),$(i),30) > /dev/null
 
 endef
 $(eval $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(foreach v,$(VALTOOLS),$(call valgrind)))))
