@@ -8,7 +8,7 @@ GLOBALDEPS += system.supp toreport.supp
 
 ### Top-level targets
 
-ERRORKINDS=memcheck helgrind drd coverage
+ERRORKINDS=memcheck helgrind callgrind
 ERRORFILES=$(foreach x,$(ERRORKINDS),errors.$(x))
 
 # Run all the bits and display the resulting logs
@@ -32,7 +32,7 @@ biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 
 ### Individual test specifications
 
-CFLAGS += -Wall -g -O0
+CFLAGS += -Wall -g -O3
 CFLAGS += -I$(INSTALL)/dyninst/include -I$(INSTALL)/boost/include
 LDFLAGS += -L$(INSTALL)/elfutils/lib -Wl,-rpath=$(INSTALL)/elfutils/lib
 LDFLAGS += -L$(INSTALL)/dyninst/lib -Wl,-rpath=$(INSTALL)/dyninst/lib
@@ -69,7 +69,7 @@ unstrip/unstrip = ./$(0) -f $(1) -o /dev/null
 
 TESTS += hpcstruct/hpcstruct-bin
 hpcstruct/hpcstruct-bin_ENV = LD_LIBRARY_PATH=$(LDLPATH)
-hpcstruct/hpcstruct-bin = ./$(0) -o /dev/null -j$(2) $(1)
+hpcstruct/hpcstruct-bin = ./$(0) -o /dev/null -j$(2) --jobs-symtab $(2) $(1)
 
 ### Test output concatination rules
 
