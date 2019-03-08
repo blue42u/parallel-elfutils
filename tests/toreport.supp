@@ -1,0 +1,10 @@
+{
+  HPCToolkit's own errors
+  Helgrind:Race
+  obj:*hpcstruct-bin
+}
+{
+  HPCToolkit's own errors
+  drd:ConflictingAccess
+  obj:*hpcstruct-bin
+}
