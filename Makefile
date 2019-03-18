@@ -20,7 +20,7 @@ dl:
 #----------------------------------------------------------------------------
 
 INST = $(shell pwd)/install
-XFLAGS = -O3 -g
+XFLAGS = -O0 -g
 
 #----------------------------------------------------------------------------
 # dyninst test harness for detecting races caused by libdw in elfutils
@@ -49,7 +49,7 @@ dyninst-build: dl boost gcc elfutils-build
 		-DLIBDWARF_INCLUDE_DIR=$(INST)/elfutils/include \
 		-DLIBDWARF_LIBRARIES=$(INST)/elfutils/lib/libdw.so \
 		-DIBERTY_LIBRARIES=$(INST)/gcc/lib64/libiberty.a \
-		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_BUILD_TYPE=Debug \
 		../../dyninst; fi
 	$(MAKE) -j -C build/dyninst install
 

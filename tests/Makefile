@@ -32,7 +32,7 @@ biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 
 ### Individual test specifications
 
-CFLAGS += -Wall -g -O3
+CFLAGS += -Wall -g -O0
 CFLAGS += -I$(INSTALL)/dyninst/include -I$(INSTALL)/boost/include
 LDFLAGS += -L$(INSTALL)/elfutils/lib -Wl,-rpath=$(INSTALL)/elfutils/lib
 LDFLAGS += -L$(INSTALL)/dyninst/lib -Wl,-rpath=$(INSTALL)/dyninst/lib
