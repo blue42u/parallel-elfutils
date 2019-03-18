@@ -39,7 +39,7 @@ LDFLAGS += -L$(INSTALL)/dyninst/lib -Wl,-rpath=$(INSTALL)/dyninst/lib
 LDFLAGS += -L$(INSTALL)/boost/lib -Wl,-rpath=$(INSTALL)/boost/lib
 LDFLAGS += -Wl,-rpath=$(INSTALL)/gcc/lib -Wl,-rpath=$(INSTALL)/gcc/lib64
 
-LDLPATH = $(INSTALL)/dyninst/lib:$(INSTALL)/elfutils/lib:$(INSTALL)/gcc/lib64
+LDLPATH = $(INSTALL)/dyninst/lib:$(INSTALL)/elfutils/lib:$(INSTALL)/gcc/lib64:/projects/comp522/jma14/tbb/lib
 
 GLOBALDEPS += $(INSTALL)/dyninst/lib/libsymtabAPI.so
 GLOBALDEPS += $(INSTALL)/dyninst/lib/libparseAPI.so
