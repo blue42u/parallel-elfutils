@@ -8,12 +8,21 @@ GLOBALDEPS += system.supp toreport.supp
 
 ### Top-level targets
 
-ERRORKINDS=memcheck helgrind callgrind
+ERRORKINDS=memcheck helgrind
 ERRORFILES=$(foreach x,$(ERRORKINDS),errors.$(x))
+
+ifdef DRD
+ERRORKINDS += drd
+endif
+
+ifdef CALLGRIND
+ERRORKINDS += callgrind
+OUTPUTFILES += output.callgrind.txz
+endif
 
 # Run all the bits and display the resulting logs
 run: $(ERRORFILES)
-	less -S $+
+	less -S $(ERRORFILES)
 
 # View the last logs from the last run without updating them
 last:
@@ -82,6 +91,11 @@ errors.%: $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call errors,$(t),$(i),%))
 errors.coverage: cgstats.lua \
 	$(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call output,$(t),$(i),callgrind)))
 	lua cgstats.lua $(filter-out cgstats.lua,$^) $@
+
+output.callgrind.txz: \
+	$(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call output,$(t),$(i),callgrind)))
+	@rm -f $@
+	tar cvJf $@ $^
 
 ### Valgrind Testing Machinery
 
