@@ -21,7 +21,7 @@ OUTPUTFILES += output.callgrind.txz
 endif
 
 # Run all the bits and display the resulting logs
-run: $(ERRORFILES)
+run: $(ERRORFILES) $(OUTPUTFILES)
 	less -S $(ERRORFILES)
 
 # View the last logs from the last run without updating them
@@ -38,6 +38,13 @@ INPUTS += biginputs/libasm.so
 biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 	@mkdir -p biginputs
 	ln -sf $< $@
+
+ifdef REALBIG
+INPUTS += biginputs/libdyninstAPI.so
+biginputs/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
+	@mkdir -p biginputs
+	ln -sf $< $@
+endif
 
 ### Individual test specifications
 
@@ -85,15 +92,15 @@ hpcstruct/hpcstruct-bin = ./$(0) -o /dev/null -j$(2) --jobs-symtab $(2) $(1)
 errors = $(dir $(1))errors.$(notdir $(1)).$(subst /,_,$(2)).$(3)
 output = $(dir $(1))output.$(notdir $(1)).$(subst /,_,$(2)).$(3)
 
-errors.%: $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call errors,$(t),$(i),%)))
+errors.%: $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call errors,$(t),$(i),%)))
 	cat $^ > $@
 
 errors.coverage: cgstats.lua \
-	$(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call output,$(t),$(i),callgrind)))
+	$(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call output,$(t),$(i),callgrind)))
 	lua cgstats.lua $(filter-out cgstats.lua,$^) $@
 
-output.callgrind.txz: \
-	$(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call output,$(t),$(i),callgrind)))
+output.%.txz: \
+	$(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call output,$(t),$(i),%)))
 	@rm -f $@
 	tar cvJf $@ $^
 
