@@ -4,6 +4,9 @@ output.*
 **/output.*
 
 test1/main
+test1/main.hpcstruct
 input1/input
+input1/input.hpcstruct
+hpcstruct/hpcstruct-bin.hpcstruct
 unstrip/
 biginputs/

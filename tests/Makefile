@@ -20,6 +20,10 @@ ERRORKINDS += callgrind
 OUTPUTFILES += output.callgrind.txz
 endif
 
+ifdef PROF
+OUTPUTFILES += output.prof.txz
+endif
+
 # Run all the bits and display the resulting logs
 run: $(ERRORFILES) $(OUTPUTFILES)
 	less -S $(ERRORFILES)
@@ -126,23 +130,26 @@ $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
 		$(call $(t),$(i),$(VTHREADS))
 
 endef
-$(eval $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(foreach v,$(VALTOOLS),$(call valgrind)))))
+$(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(foreach v,$(VALTOOLS),$(call valgrind)))))
 
-### Cleanup
-.PHONY: clean
-clean:
-	rm -f $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(foreach v,$(VALTOOLS), \
-		$(call errors,$(t),$(i),$(v)) \
-		$(if VOUT_$(v),$(call output,$(t),$(i),$(v))) \
-	))) $(ERRORFILES)
+### HPCToolkit Profiling Macherinery
 
-### Stability Testing Machinery, to be rebuilt
-#define stability
-#$(call errors,$(t),$(i),stability): $(t) $(i) $(GLOBALDEPS)
-#	$(call $(t),$(i),1) > a.log
-#	$(call $(t),$(i),24) > b.log
-#	diff -s a.log b.log > $$@
-#	rm -f a.log b.log
+define hpcstruct
+$(t).hpcstruct: $(t) hpcstruct/hpcstruct-bin
+	LD_LIBRARY_PATH=$(LDLPATH) ./hpcstruct/hpcstruct-bin -o $$@ $$<
 
-#endef
-#$(eval $(foreach t,$(TESTS),$(foreach i,$(INPUTS),$(call stability))))
+endef
+$(eval $(foreach t,$(TESTS),$(call hpcstruct)))
+
+HTHREADS = 24
+
+define hpcrun
+$(call output,$(t),$(i),prof): $(t).hpcstruct $(i) $(GLOBALDEPS)
+	$(call $(t)_ENV,$(i),$(HTHREADS)) ./hpcrun -o $$@.pre \
+		$(call $(t),$(i),$(HTHREADS))
+	./hpcprof -o $$@ -S $$< -M stats \
+		-I $(WORK)/dyninst/+ -I $(WORK)/elfutils/+ \
+		$$@.pre
+
+endef
+$(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
