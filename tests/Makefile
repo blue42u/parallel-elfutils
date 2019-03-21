@@ -138,7 +138,7 @@ $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(foreach v,$(VALTOOLS),$(call
 ### HPCToolkit Profiling Macherinery
 
 define hpcstruct
-$(t).hpcstruct: $(t) hpcstruct/hpcstruct-bin $(GLOBALDEPS)
+$(t).hpcstruct: $(t) $(GLOBALDEPS)
 	./hpcstruct -o $$@ $$<
 #	LD_LIBRARY_PATH=$(LDLPATH) ./hpcstruct/hpcstruct-bin -o $$@ $$<
 

@@ -57,7 +57,7 @@ export DARSHAN_DISABLE=1
 
 # If this script can't find its own install prefix, or if the script
 # is moved elsewhere, then set HPCTOOLKIT here.
-HPCTOOLKIT='/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/hpctoolkit-2018.12.28-4rqu6nwr24lkgjz5nxv342c5bulcubqd'
+HPCTOOLKIT='/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/hpctoolkit-2018.12.28-223ievbzkahcd3tirlwsxlb3w2ulyf2b'
 
 VERSION='2018.09'
 
