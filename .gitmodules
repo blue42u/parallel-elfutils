@@ -1,6 +1,8 @@
 [submodule "dyninst"]
 	path = dyninst
 	url = https://github.com/blue42u/dyninst.git
+	ignore = dirty
 [submodule "elfutils"]
 	path = elfutils
 	url = https://github.com/blue42u/elfutils.git
+	ignore = dirty
