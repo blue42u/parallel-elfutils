@@ -4,3 +4,6 @@
 [submodule "elfutils"]
 	path = elfutils
 	url = https://github.com/blue42u/elfutils.git
+[submodule "hpctoolkit"]
+	path = hpctoolkit
+	url = https://github.com/HPCToolkit/hpctoolkit.git

@@ -87,9 +87,12 @@ unstrip/unstrip: $(foreach f,$(FILES),$(WORK)/dyninst/examples/unstrip.dir/$(f))
 unstrip/unstrip_ENV = OMP_NUM_THREADS=$(2)
 unstrip/unstrip = ./$(0) -f $(1) -o /dev/null
 
-TESTS += hpcstruct/hpcstruct-bin
-hpcstruct/hpcstruct-bin_ENV = LD_LIBRARY_PATH=$(LDLPATH)
-hpcstruct/hpcstruct-bin = ./$(0) -o /dev/null -j$(2) --jobs-symtab $(2) $(1)
+TESTS += hpc/hpcstruct-bin
+hpc/hpcstruct-bin:
+	@mkdir -p hpc
+	ln -s $(INSTALL)/hpctoolkit/libexec/hpctoolkit/hpcstruct-bin $@
+hpc/hpcstruct-bin_ENV = LD_LIBRARY_PATH=$(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs:$(INSTALL)/gcc/lib64:/projects/comp522/jma14/tbb/lib
+hpc/hpcstruct-bin = ./$(0) -o /dev/null -j$(2) --jobs-symtab $(2) $(1)
 
 ### Test output concatination rules
 
@@ -136,7 +139,8 @@ $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(foreach v,$(VALTOOLS),$(call
 
 define hpcstruct
 $(t).hpcstruct: $(t) hpcstruct/hpcstruct-bin $(GLOBALDEPS)
-	LD_LIBRARY_PATH=$(LDLPATH) ./hpcstruct/hpcstruct-bin -o $$@ $$<
+	./hpcstruct -o $$@ $$<
+#	LD_LIBRARY_PATH=$(LDLPATH) ./hpcstruct/hpcstruct-bin -o $$@ $$<
 
 endef
 $(eval $(foreach t,$(TESTS),$(call hpcstruct)))

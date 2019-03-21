@@ -26,7 +26,7 @@ XFLAGS = -O0 -g
 # dyninst test harness for detecting races caused by libdw in elfutils
 #----------------------------------------------------------------------------
 
-check: dyninst-build valgrind
+check: dyninst-build  hpctoolkit-build valgrind
 	$(MAKE) -C tests
 
 last:
@@ -124,6 +124,34 @@ elfutils-build: dl
 			CFLAGS="$(XFLAGS)" \
 			INSTALL="$(shell which install) -C"; fi
 	$(MAKE) -j12 -C build/elfutils install
+
+#----------------------------------------------------------------------------
+# hpctookit
+#----------------------------------------------------------------------------
+
+hpctoolkit-build: dyninst-build
+	@mkdir -p build/hpctoolkit install/hpctoolkit
+	@cd build/hpctoolkit && if [ ! -e Makefile ]; then \
+		../../hpctoolkit/configure \
+			--prefix=$(INST)/hpctoolkit/ \
+			--enable-debug \
+			--with-binutils=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/binutils-2.31.1-kqv3rcglalogtk6z2goadv7efp3ttxsp \
+			--with-boost=$(INST)/boost/ \
+			--with-bzip=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/bzip2-1.0.6-4m2m7tcemnvq2sdm6nvodvyvndpj3d44 \
+			--with-dyninst=$(INST)/dyninst/ \
+			--with-elfutils=$(INST)/elfutils/ \
+			--with-tbb=/projects/comp522/jma14/tbb \
+			--with-libdwarf=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/libdwarf-20180129-hpfkxw2gbnkbyqz6cwbjecgorb75s6fc \
+			--with-libmonitor=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/libmonitor-2018.07.18-ampjrd3icqcmnhrcnitag3cpqjotjtfi \
+			--with-libunwind=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/libunwind-2018.10.12-szyxqpyaumq7djnkols36utxgsbc3qf5 \
+			--with-xerces=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/xerces-c-3.2.2-jvn3zwe3y226fqxiyzstqahpb57szire \
+			--with-lzma=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/xz-5.2.4-42sbhepxxh3yowggil26r476nz7ixcog \
+			--with-zlib=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/zlib-1.2.11-l2f3fdpy5urpxsr4prw765g3veaux3og \
+			LDFLAGS="-L$(INST)/gcc/lib64 -lgomp" \
+			--with-xed=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/intel-xed-2018.02.14-hk2unjcjkxmb4ykx7oxb3qnszrb2fxaw \
+			--with-perfmon=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/libpfm4-4.10.1-fs4zdgcohg7qovbsbiz22fs22gq5cjdr \
+			INSTALL="$(shell which install) -C"; fi
+	make -j12 -C build/hpctoolkit install
 
 #----------------------------------------------------------------------------
 # maintenance
