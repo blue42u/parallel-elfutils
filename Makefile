@@ -51,7 +51,7 @@ dyninst-build: dl boost gcc elfutils-build
 		-DIBERTY_LIBRARIES=$(INST)/gcc/lib64/libiberty.a \
 		-DCMAKE_BUILD_TYPE=Debug \
 		../../dyninst; fi
-	$(MAKE) -j -C build/dyninst install
+	$(MAKE) -j12 -C build/dyninst install
 
 #----------------------------------------------------------------------------
 # boost
@@ -88,7 +88,7 @@ valgrind: boost
 	mv valgrind-3.14.0 valgrind
 	cd valgrind && CPPFLAGS="-I$(INST)/boost/include -L$(INST)/boost/lib" \
 		./configure --prefix=$(INST)/valgrind
-	cd valgrind && $(MAKE) -j install
+	cd valgrind && $(MAKE) -j 24 install
 
 #----------------------------------------------------------------------------
 # GCC (debugging GOMP and libiberty)
@@ -106,8 +106,8 @@ gcc:
 		--disable-gcov --disable-libada --disable-libsanitizer \
 		--disable-libssp --disable-libquadmath-support \
 		--disable-libvtv --enable-install-libiberty
-	cd gcc && $(MAKE) -j
-	cd gcc && $(MAKE) -j install
+	cd gcc && $(MAKE) -j12
+	cd gcc && $(MAKE) -j12 install
 
 #----------------------------------------------------------------------------
 # elfutils
@@ -123,7 +123,7 @@ elfutils-build: dl
 			--prefix=$(INST)/elfutils \
 			CFLAGS="$(XFLAGS)" \
 			INSTALL="$(shell which install) -C"; fi
-	$(MAKE) -j -C build/elfutils install
+	$(MAKE) -j12 -C build/elfutils install
 
 #----------------------------------------------------------------------------
 # maintenance

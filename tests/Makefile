@@ -135,7 +135,7 @@ $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(foreach v,$(VALTOOLS),$(call
 ### HPCToolkit Profiling Macherinery
 
 define hpcstruct
-$(t).hpcstruct: $(t) hpcstruct/hpcstruct-bin
+$(t).hpcstruct: $(t) hpcstruct/hpcstruct-bin $(GLOBALDEPS)
 	LD_LIBRARY_PATH=$(LDLPATH) ./hpcstruct/hpcstruct-bin -o $$@ $$<
 
 endef
@@ -145,9 +145,10 @@ HTHREADS = 24
 
 define hpcrun
 $(call output,$(t),$(i),prof): $(t).hpcstruct $(i) $(GLOBALDEPS)
-	$(call $(t)_ENV,$(i),$(HTHREADS)) ./hpcrun -o $$@.pre \
+	@rm -rf $$@.pre $$@
+	$(call $(t)_ENV,$(i),$(HTHREADS)) ./hpcrun -t -o $$@.pre \
 		$(call $(t),$(i),$(HTHREADS))
-	./hpcprof -o $$@ -S $$< -M stats \
+	./hpcprof -o $$@ -S $$< \
 		-I $(WORK)/dyninst/+ -I $(WORK)/elfutils/+ \
 		$$@.pre
 
