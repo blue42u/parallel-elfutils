@@ -45,6 +45,17 @@
 }
 
 {
+  libgomp
+  Helgrind:Race
+  fun:priority_queue_*
+}
+{
+  libgomp
+  drd:ConflictingAccess
+  fun:priority_queue_*
+}
+
+{
   tbb::concurrent_hash_map
   Helgrind:Race
   ...
