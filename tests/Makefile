@@ -9,7 +9,12 @@ GLOBALDEPS += system.supp toreport.supp
 ### Top-level targets
 
 ERRORKINDS=memcheck helgrind
-ERRORFILES=$(foreach x,$(ERRORKINDS),errors.$(x))
+
+ifdef ALL
+CALLGRIND=1
+PROF=1
+STABLE=1
+endif
 
 ifdef DRD
 ERRORKINDS += drd
@@ -23,6 +28,12 @@ endif
 ifdef PROF
 OUTPUTFILES += output.prof.txz
 endif
+
+ifdef STABLE
+ERRORKINDS += stable
+endif
+
+ERRORFILES=$(foreach x,$(ERRORKINDS),errors.$(x))
 
 # Run all the bits and display the resulting logs
 run: $(ERRORFILES) $(OUTPUTFILES)
@@ -43,12 +54,12 @@ biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 	@mkdir -p biginputs
 	ln -sf $< $@
 
-ifdef REALBIG
-INPUTS += biginputs/libdyninstAPI.so
+BIGINPUTS += biginputs/libdyninstAPI.so
 biginputs/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
 	@mkdir -p biginputs
 	ln -sf $< $@
-endif
+
+INPUTS += $(BIGINPUTS)
 
 ### Individual test specifications
 
@@ -58,6 +69,8 @@ LDFLAGS += -L$(INSTALL)/elfutils/lib -Wl,-rpath=$(INSTALL)/elfutils/lib
 LDFLAGS += -L$(INSTALL)/dyninst/lib -Wl,-rpath=$(INSTALL)/dyninst/lib
 LDFLAGS += -L$(INSTALL)/boost/lib -Wl,-rpath=$(INSTALL)/boost/lib
 LDFLAGS += -Wl,-rpath=$(INSTALL)/gcc/lib -Wl,-rpath=$(INSTALL)/gcc/lib64
+LDFLAGS += -L/projects/comp522/jma14/tbb -Wl,-rpath=/projects/comp522/jma14/tbb
+LDFLAGS += -ltbb_debug
 
 LDLPATH = $(INSTALL)/dyninst/lib:$(INSTALL)/elfutils/lib:$(INSTALL)/gcc/lib64:/projects/comp522/jma14/tbb/lib
 
@@ -72,8 +85,8 @@ TESTS += test1/main
 LDLIBS = -lsymtabAPI -lparseAPI -linstructionAPI
 test1/main: test1/main.cpp 
 	cc $(CFLAGS) -std=c++11 -fopenmp -o $@ $^ $(LDFLAGS) $(LDLIBS)
-test1/main_ENV = OMP_NUM_THREADS=$(2)
-test1/main = ./$(0) $(1) > /dev/null
+test1/main_ENV = OMP_NUM_THREADS=$(2) LD_LIBRARY_PATH=$(LDLPATH)
+test1/main = ./$(0) $(1) > $(3)
 
 TESTS += unstrip/unstrip
 LDLIBS = -lelf -lparseAPI -lsymtabAPI -ldynElf -ldynDwarf -linstructionAPI -lcommon
@@ -84,19 +97,15 @@ unstrip/unstrip: $(foreach f,$(FILES),$(WORK)/dyninst/examples/unstrip.dir/$(f))
 	ln -sf $(WORK)/dyninst/examples/unstrip.dir/params.db unstrip/params.db
 	ln -sf $(WORK)/dyninst/examples/unstrip.dir/unistd.db unstrip/unistd.db
 	c++ $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-unstrip/unstrip_ENV = OMP_NUM_THREADS=$(2)
-unstrip/unstrip = ./$(0) -f $(1) -o /dev/null
+unstrip/unstrip_ENV = OMP_NUM_THREADS=$(2) LD_LIBRARY_PATH=$(LDLPATH)
+unstrip/unstrip = ./$(0) -f $(1) -o $(3)
 
-ifdef PROF
-# Disable hpcstruct, its currently highly unstable in active executions
-else
 TESTS += hpc/hpcstruct-bin
 hpc/hpcstruct-bin:
 	@mkdir -p hpc
 	ln -s $(INSTALL)/hpctoolkit/libexec/hpctoolkit/hpcstruct-bin $@
 hpc/hpcstruct-bin_ENV = LD_LIBRARY_PATH=$(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs:$(INSTALL)/gcc/lib64:/projects/comp522/jma14/tbb/lib
-hpc/hpcstruct-bin = ./$(0) -o /dev/null -j$(2) --jobs-symtab $(2) $(1)
-endif
+hpc/hpcstruct-bin = ./$(0) -o $(3) -j$(2) --jobs-symtab $(2) $(1)
 
 ### Test output concatination rules
 
@@ -113,7 +122,7 @@ errors.coverage: cgstats.lua \
 output.%.txz: \
 	$(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call output,$(t),$(i),%)))
 	@rm -f $@
-	tar cvJf $@ $^
+	tar cJf $@ $^
 
 ### Valgrind Testing Machinery
 
@@ -125,16 +134,27 @@ VOUT_callgrind = --callgrind-out-file=$(call output,$(t),$(i),$(v))
 
 VFLAGS_callgrind = --collect-jumps=yes --collect-bus=yes --cache-sim=yes
 VFLAGS_callgrind += --simulate-wb=yes --cacheuse=yes --simulate-hwpref=yes
-VFLAGS_memcheck = --leak-check=full
+VFLAGS_memcheck = --leak-check=full --track-origins=yes
+
+ifdef SHOWLEAKS
+#VFLAGS_memcheck += --show-leak-kinds=all
+else
+VFLAGS_memcheck += --show-leak-kinds=none
+endif
 
 VTHREADS = 30
 
 define valgrind
+ifeq (,$(findstring $(i),$(BIGINPUTS)))
 $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
 		$(t) $(i) $(GLOBALDEPS)
 	$(call $(t)_ENV,$(i),$(VTHREADS)) $(VAL) $(VFLAGS) \
 		$(VFLAGS_$(v)) $(VOUT_$(v)) \
-		$(call $(t),$(i),$(VTHREADS))
+		$(call $(t),$(i),$(VTHREADS),/dev/null)
+else
+$(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))):
+	touch $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v)))
+endif
 
 endef
 $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(foreach v,$(VALTOOLS),$(call valgrind)))))
@@ -153,11 +173,42 @@ HTHREADS = $(shell grep -c ^processor /proc/cpuinfo)
 define hpcrun
 $(call output,$(t),$(i),prof): $(t).hpcstruct $(i) $(GLOBALDEPS)
 	@rm -rf $$@.pre $$@
-	$(call $(t)_ENV,$(i),$(HTHREADS)) ./hpcrun -t -o $$@.pre \
-		$(call $(t),$(i),$(HTHREADS))
+	./hpcrun -t -o $$@.pre bash -c \
+	'$(call $(t)_ENV,$(i),$(HTHREADS)) exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
 	./hpcprof -o $$@ -S $$< \
 		-I $(WORK)/dyninst/+ -I $(WORK)/elfutils/+ \
 		$$@.pre
+	@rm -rf $$@.pre
 
 endef
 $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
+
+### Stability Testing Machinery
+
+define pass
+	$(call $(t)_ENV,$(i),$(1)) \
+		/usr/bin/time -ao $$@ -f ' Pass $(1): %E ~ %Uu/%Sk (%P)' \
+		$(call $(t),$(i),04,$$@.tmp/pass.$(1))
+	@if cmp -s $$@.tmp/base $$@.tmp/pass.$(1); \
+	then echo '        | Output is stable' >> $$@; \
+	else echo '        | Output is not stable!' >> $$@; \
+	fi
+endef
+
+define stable
+$(call errors,$(t),$(i),stable): $(t) $(i) $(GLOBALDEPS)
+	@rm -rf $$@ $$@.tmp
+	@mkdir $$@.tmp
+	@echo '### Command $(call $(t),$(i),N,O)' > $$@
+	$(call $(t)_ENV,$(i),1) \
+		/usr/bin/time -ao $$@ -f 'Baseline: %E ~ %Uu/%Sk (%P)' \
+		$(call $(t),$(i),1,$$@.tmp/base)
+	$(call pass,02)
+	$(call pass,04)
+	$(call pass,08)
+	$(call pass,16)
+	$(call pass,32)
+	@echo '' >> $$@
+
+endef
+$(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call stable))))
