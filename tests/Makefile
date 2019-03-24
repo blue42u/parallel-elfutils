@@ -197,9 +197,10 @@ $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
 ### Stability Testing Machinery
 
 define pass
-	$(call $(t)_ENV,$(i),$(1)) \
+	$(call $(t)_ENV,$(i),$(2)) \
 		/usr/bin/time -ao $$@ -f ' Pass $(1): %E ~ %Uu/%Sk (%P)' \
-		$(call $(t),$(i),04,$$@.tmp/pass.$(1))
+		$(call $(t),$(i),$(2),$$@.tmp/pass.$(1)) \
+		|| (echo "        | Failed with exit code $$$$?!" >> $$@)
 	@if cmp -s $$@.tmp/base $$@.tmp/pass.$(1); \
 	then echo '        | Output is stable' >> $$@; \
 	else echo '        | Output is not stable!' >> $$@; \
@@ -214,11 +215,11 @@ $(call errors,$(t),$(i),stable): $(t) $(i) $(GLOBALDEPS)
 	$(call $(t)_ENV,$(i),1) \
 		/usr/bin/time -ao $$@ -f 'Baseline: %E ~ %Uu/%Sk (%P)' \
 		$(call $(t),$(i),1,$$@.tmp/base)
-	$(call pass,02)
-	$(call pass,04)
-	$(call pass,08)
-	$(call pass,16)
-	$(call pass,32)
+	$(call pass,02,2)
+	$(call pass,04,4)
+	$(call pass,08,8)
+	$(call pass,16,16)
+	$(call pass,32,32)
 	@echo '' >> $$@
 
 endef
