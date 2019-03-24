@@ -172,6 +172,12 @@ endef
 $(eval $(foreach f,$(TESTS),$(call hpcstruct)))
 $(eval $(foreach f,$(wildcard $(INSTALL)/dyninst/lib/*.so),$(call hpcstruct)))
 $(eval $(foreach f,$(wildcard $(INSTALL)/elfutils/lib/*.so),$(call hpcstruct)))
+$(eval $(foreach f,$(wildcard $(INSTALL)/gcc/lib64/libgomp*.so),$(call hpcstruct)))
+$(eval $(foreach f,$(wildcard $(INSTALL)/gcc/lib64/libstd*.so),$(call hpcstruct)))
+$(eval $(foreach f,$(addprefix $(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs/, \
+	libparseAPI.so.10.0.0 libinstructionAPI.so.10.0.0 libsymtabAPI.so.10.0.0 \
+	libdynElf.so.10.0.0 libcommon.so.10.0.0 \
+),$(call hpcstruct)))
 
 HTHREADS = $(shell grep -c ^processor /proc/cpuinfo)
 
