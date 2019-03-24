@@ -162,23 +162,28 @@ $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(foreach v,$(VALTOOLS),$(call
 ### HPCToolkit Profiling Macherinery
 
 define hpcstruct
-$(t).hpcstruct: $(t) $(GLOBALDEPS)
+STRUCT += prof/$(notdir $(f)).hpcstruct
+SS += -S prof/$(notdir $(f)).hpcstruct
+prof/$(notdir $(f)).hpcstruct: $(f)
+	@mkdir -p prof
 	./hpcstruct -o $$@ $$<
 
 endef
-$(eval $(foreach t,$(TESTS),$(call hpcstruct)))
+$(eval $(foreach f,$(TESTS),$(call hpcstruct)))
+$(eval $(foreach f,$(wildcard $(INSTALL)/dyninst/lib/*.so),$(call hpcstruct)))
+$(eval $(foreach f,$(wildcard $(INSTALL)/elfutils/lib/*.so),$(call hpcstruct)))
 
 HTHREADS = $(shell grep -c ^processor /proc/cpuinfo)
 
 define hpcrun
-$(call output,$(t),$(i),prof): $(t).hpcstruct $(i) $(GLOBALDEPS)
-	@rm -rf $$@.pre $$@
-	./hpcrun -t -o $$@.pre bash -c \
+$(call output,$(t),$(i),prof.pre): $(t) $(i) $(GLOBALDEPS)
+	@rm -rf $$@
+	./hpcrun -t -o $$@ bash -c \
 	'$(call $(t)_ENV,$(i),$(HTHREADS)) exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
-	./hpcprof -o $$@ -S $$< \
-		-I $(WORK)/dyninst/+ -I $(WORK)/elfutils/+ \
-		$$@.pre
-	@rm -rf $$@.pre
+
+$(call output,$(t),$(i),prof): $(call output,$(t),$(i),prof.pre) $(STRUCT)
+	@rm -rf $$@
+	./hpcprof -o $$@ $(SS) -I $(WORK)/dyninst/+ -I $(WORK)/elfutils/+ $$<
 
 endef
 $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
