@@ -49,7 +49,7 @@ INPUTS += input1/input
 input1/input: input1/main.c input1/print.c
 	cc $(CFLAGS) -Wall -g -o $@ $^
 
-INPUTS += biginputs/libasm.so
+BIGINPUTS += biginputs/libasm.so
 biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 	@mkdir -p biginputs
 	ln -sf $< $@
@@ -60,6 +60,10 @@ biginputs/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
 	ln -sf $< $@
 
 INPUTS += $(BIGINPUTS)
+
+ifdef BIG
+BIGINPUTS =
+endif
 
 ### Individual test specifications
 
@@ -153,7 +157,8 @@ $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
 		$(call $(t),$(i),$(VTHREADS),/dev/null)
 else
 $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))):
-	touch $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v)))
+	@rm -f $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v)))
+	@touch $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v)))
 endif
 
 endef
