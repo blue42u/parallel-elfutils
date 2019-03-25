@@ -49,21 +49,19 @@ INPUTS += input1/input
 input1/input: input1/main.c input1/print.c
 	cc $(CFLAGS) -Wall -g -o $@ $^
 
-BIGINPUTS += biginputs/libasm.so
+INPUTS += biginputs/libasm.so
 biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 	@mkdir -p biginputs
-	ln -sf $< $@
+	objcopy -S $< $@
+	#ln -sf $< $@
 
 BIGINPUTS += biginputs/libdyninstAPI.so
 biginputs/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
 	@mkdir -p biginputs
-	ln -sf $< $@
+	objcopy -S $< $@
+	#ln -sf $< $@
 
 INPUTS += $(BIGINPUTS)
-
-ifdef BIG
-BIGINPUTS =
-endif
 
 ### Individual test specifications
 
@@ -204,8 +202,9 @@ $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
 define pass
 	$(call $(t)_ENV,$(i),$(2)) \
 		/usr/bin/time -ao $$@ -f ' Pass $(1): %E ~ %Uu/%Sk (%P)' \
-		$(call $(t),$(i),$(2),$$@.tmp/pass.$(1)) \
-		|| (echo "        | Failed with exit code $$$$?!" >> $$@)
+		$(call $(t),$(i),$(2),$$@.tmp/pass.$(1)) 2>> $$@.tmp/pass.$(1).err \
+		|| (echo "        | Failed with exit code $$$$?!" >> $$@.tmp/pass.$(1).err; \
+		cat $$@.tmp/pass.$(1).err >> $$@)
 	@if cmp -s $$@.tmp/base $$@.tmp/pass.$(1); \
 	then echo '        | Output is stable' >> $$@; \
 	else echo '        | Output is not stable!' >> $$@; \
@@ -219,7 +218,9 @@ $(call errors,$(t),$(i),stable): $(t) $(i) $(GLOBALDEPS)
 	@echo '### Command $(call $(t),$(i),N,O)' > $$@
 	$(call $(t)_ENV,$(i),1) \
 		/usr/bin/time -ao $$@ -f 'Baseline: %E ~ %Uu/%Sk (%P)' \
-		$(call $(t),$(i),1,$$@.tmp/base)
+		$(call $(t),$(i),1,$$@.tmp/base) 2>> $$@.tmp/base.err \
+		|| (echo "        | Baseline failed ($$$$?), something is very broken!" >> $$@.tmp/base.err; \
+		cat $$@.tmp/base.err >> $$@)
 	$(call pass,02,2)
 	$(call pass,04,4)
 	$(call pass,08,8)
