@@ -10,7 +10,6 @@ dl:
 	@if [ ! -e elfutils/configure.ac ]; then \
 		git submodule update --init elfutils; fi
 
-
 #----------------------------------------------------------------------------
 # download valgrind, elfutils, boost, and dyninst
 #
@@ -31,6 +30,10 @@ check: dyninst-build  hpctoolkit-build valgrind
 
 last:
 	$(MAKE) -C tests last
+
+batch: dyninst-build  hpctoolkit-build valgrind
+	sbatch cl_val.sh
+	sbatch cl_perf.sh
 
 #----------------------------------------------------------------------------
 # dyninst
