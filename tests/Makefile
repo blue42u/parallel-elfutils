@@ -36,8 +36,10 @@ endif
 ERRORFILES=$(foreach x,$(ERRORKINDS),errors.$(x))
 
 # Run all the bits and display the resulting logs
+check: run last
+
+# Just run, don't view afterwards. Useful for scripts
 run: $(ERRORFILES) $(OUTPUTFILES)
-	less -S $(ERRORFILES)
 
 # View the last logs from the last run without updating them
 last:
@@ -45,23 +47,38 @@ last:
 
 ### Individual input data rules
 
+# Three size classes of inputs.
+INPUTS :=
+BIGINPUTS :=
+BIGGERINPUTS :=
+
 INPUTS += input1/input
 input1/input: input1/main.c input1/print.c
 	cc $(CFLAGS) -Wall -g -o $@ $^
 
-INPUTS += biginputs/libasm.so
+BIGINPUTS += biginputs/libasm.so
 biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 	@mkdir -p biginputs
 	objcopy -S $< $@
-	#ln -sf $< $@
 
-BIGINPUTS += biginputs/libdyninstAPI.so
+BIGGERINPUTS += biginputs/libdyninstAPI.so
 biginputs/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
 	@mkdir -p biginputs
 	objcopy -S $< $@
-	#ln -sf $< $@
 
-INPUTS += $(BIGINPUTS)
+INPUTS += $(BIGINPUTS) $(BIGGERINPUTS)
+
+# If BIG=1, we treat BIG like normal size
+ifdef BIG
+BIGINPUTS :=
+endif
+
+# If BIGGER=1, we treat BIGGER like normal size
+ifdef BIGGER
+BIGGERINPUTS := 
+else
+BIGINPUTS += $(BIGGERINPUTS)
+endif
 
 ### Individual test specifications
 
@@ -154,7 +171,8 @@ $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
 		$(VFLAGS_$(v)) $(VOUT_$(v)) \
 		$(call $(t),$(i),$(VTHREADS),/dev/null)
 else
-$(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))):
+$(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
+	Makefile $(t) $(i) $(GLOBALDEPS)
 	@rm -f $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v)))
 	@touch $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v)))
 endif
