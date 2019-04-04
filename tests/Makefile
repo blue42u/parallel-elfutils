@@ -1,12 +1,13 @@
 WORK=$(shell pwd)/..
 INSTALL=$(WORK)/install
+SHELL=/bin/bash
 
 VFLAGS = --suppressions=system.supp --suppressions=toreport.supp --fair-sched=yes
 GLOBALDEPS += system.supp toreport.supp
 
-.PHONY: run last
+.PHONY: all view run
 
-### Top-level targets
+### Error report control variables
 
 ERRORKINDS=memcheck helgrind
 
@@ -33,61 +34,58 @@ ifdef STABLE
 ERRORKINDS += stable
 endif
 
-ERRORFILES=$(foreach x,$(ERRORKINDS),errors.$(x))
-
-# Run all the bits and display the resulting logs
-check: run last
-
-# Just run, don't view afterwards. Useful for scripts
-run: $(ERRORFILES) $(OUTPUTFILES)
-
-# View the last logs from the last run without updating them
-last:
-	less -S $(ERRORFILES)
+# The top-level target is to view the logs
+all: view
 
 ### Individual input data rules
-
-# Three size classes of inputs.
-INPUTS :=
+SMALLINPUTS :=
 BIGINPUTS :=
 BIGGERINPUTS :=
 
-INPUTS += input1/input
+SMALLINPUTS += input1/input
 input1/input: input1/main.c input1/print.c
 	cc $(CFLAGS) -Wall -g -o $@ $^
 
 BIGINPUTS += biginputs/libasm.so
 biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 	@mkdir -p biginputs
+	ln -s $< $@
+
+BIGINPUTS += stripped/libasm.so
+stripped/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
+	@mkdir -p stripped
 	objcopy -S $< $@
 
 BIGGERINPUTS += biginputs/libdyninstAPI.so
 biginputs/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
 	@mkdir -p biginputs
+	ln -s $< $@
+
+BIGGERINPUTS += stripped/libdyninstAPI.so
+stripped/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
+	@mkdir -p stripped
 	objcopy -S $< $@
 
-INPUTS += $(BIGINPUTS) $(BIGGERINPUTS)
-
-# If BIG=1, we treat BIG like normal size
+INPUTS := $(SMALLINPUTS)
 ifdef BIG
-BIGINPUTS :=
+INPUTS += $(BIGINPUTS)
+else
+ifdef BIGGER
+INPUTS += $(BIGINPUTS) $(BIGGERINPUTS)
+endif
 endif
 
-# If BIGGER=1, we treat BIGGER like normal size
-ifdef BIGGER
-BIGGERINPUTS := 
-else
-BIGINPUTS += $(BIGGERINPUTS)
-endif
+ALLINPUTS := $(SMALLINPUTS) $(BIGINPUTS) $(BIGGERINPUTS)
 
 ### Individual test specifications
 
 CFLAGS += -Wall -g -O0
 CFLAGS += -I$(INSTALL)/dyninst/include -I$(INSTALL)/boost/include
-LDFLAGS += -L$(INSTALL)/elfutils/lib -Wl,-rpath=$(INSTALL)/elfutils/lib
-LDFLAGS += -L$(INSTALL)/dyninst/lib -Wl,-rpath=$(INSTALL)/dyninst/lib
+LDFLAGS += -L$(INSTALL)/elfutils/lib
+#-Wl,-rpath=$(INSTALL)/elfutils/lib
+LDFLAGS += -L$(INSTALL)/dyninst/lib
+#-Wl,-rpath=$(INSTALL)/dyninst/lib
 LDFLAGS += -L$(INSTALL)/boost/lib -Wl,-rpath=$(INSTALL)/boost/lib
-LDFLAGS += -Wl,-rpath=$(INSTALL)/gcc/lib -Wl,-rpath=$(INSTALL)/gcc/lib64
 LDFLAGS += -L/projects/comp522/jma14/tbb -Wl,-rpath=/projects/comp522/jma14/tbb
 LDFLAGS += -ltbb_debug
 
@@ -126,17 +124,19 @@ hpc/hpcstruct-bin:
 hpc/hpcstruct-bin_ENV = LD_LIBRARY_PATH=$(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs:/projects/comp522/jma14/tbb/lib
 hpc/hpcstruct-bin = ./$(0) -o $(3) -j$(2) --jobs-symtab $(2) $(1)
 
-### Test output concatination rules
+### Test output presentation and composition rules
 
+# Error filename macros
 errors = $(dir $(1))errors.$(notdir $(1)).$(subst /,_,$(2)).$(3)
 output = $(dir $(1))output.$(notdir $(1)).$(subst /,_,$(2)).$(3)
 
-errors.%: $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call errors,$(t),$(i),%)))
-	cat $^ > $@
+ERRORFILES := $(foreach x,$(ERRORKINDS),$(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call errors,$(t),$(i),$(x)))))
+errorfiles = $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call errors,$(t),$(i),$(1))))
 
-errors.coverage: cgstats.lua \
-	$(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call output,$(t),$(i),callgrind)))
-	lua cgstats.lua $(filter-out cgstats.lua,$^) $@
+run: $(ERRORFILES) $(OUTPUTFILES)
+
+view: $(ERRORFILES) $(OUTPUTFILES)
+	less -Sf $(foreach x,$(ERRORKINDS), <(cat $(call errorfiles,$(x)) ) )
 
 output.%.txz: \
 	$(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call output,$(t),$(i),%)))
@@ -164,23 +164,16 @@ endif
 VTHREADS = 30
 
 define valgrind
-ifeq (,$(findstring $(i),$(BIGINPUTS)))
 $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
 		$(t) $(i) $(GLOBALDEPS)
-	$(call $(t)_ENV,$(i),$(VTHREADS)) \
-		LD_LIBRARY_PATH="$(INSTALL)/gcc/lib64:$$$$LD_LIBRARY_PATH" \
+	-$(call $(t)_ENV,$(i),$(VTHREADS)) \
+		LD_LIBRARY_PATH="$$$$LD_LIBRARY_PATH:$(INSTALL)/gcc/lib64" \
 		$(VAL) $(VFLAGS) \
 		$(VFLAGS_$(v)) $(VOUT_$(v)) \
 		$(call $(t),$(i),$(VTHREADS),/dev/null)
-else
-$(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
-	Makefile $(t) $(i) $(GLOBALDEPS)
-	@rm -f $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v)))
-	@touch $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v)))
-endif
 
 endef
-$(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(foreach v,$(VALTOOLS),$(call valgrind)))))
+$(eval $(foreach i,$(ALLINPUTS),$(foreach t,$(TESTS),$(foreach v,$(VALTOOLS),$(call valgrind)))))
 
 ### HPCToolkit Profiling Macherinery
 
@@ -209,7 +202,7 @@ $(call output,$(t),$(i),prof.pre): $(t) $(i) $(GLOBALDEPS)
 	@rm -rf $$@
 	./hpcrun -t -o $$@ bash -c \
 	'$(call $(t)_ENV,$(i),$(HTHREADS)) \
-		LD_LIBRARY_PATH=/usr/lib64:$$$$LD_LIBRARY_PATH \
+		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/usr/lib64 \
 		exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
 
 $(call output,$(t),$(i),prof): $(call output,$(t),$(i),prof.pre) $(STRUCT)
@@ -217,13 +210,13 @@ $(call output,$(t),$(i),prof): $(call output,$(t),$(i),prof.pre) $(STRUCT)
 	./hpcprof -o $$@ $(SS) -I $(WORK)/dyninst/+ -I $(WORK)/elfutils/+ $$<
 
 endef
-$(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
+$(eval $(foreach i,$(ALLINPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
 
 ### Stability Testing Machinery
 
 define pass
 	$(call $(t)_ENV,$(i),$(2)) \
-		LD_LIBRARY_PATH=/usr/lib64:$$$$LD_LIBRARY_PATH \
+		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/usr/lib64 \
 		/usr/bin/time -ao $$@ -f ' Pass $(1): %E ~ %Uu/%Sk (%P)' \
 		$(call $(t),$(i),$(2),$$@.tmp/pass.$(1)) 2>> $$@.tmp/pass.$(1).err \
 		|| (echo "        | Failed with exit code $$$$?!" >> $$@.tmp/pass.$(1).err; \
@@ -240,7 +233,7 @@ $(call errors,$(t),$(i),stable): $(t) $(i) $(GLOBALDEPS)
 	@mkdir $$@.tmp
 	@echo '### Command $(call $(t),$(i),N,O)' > $$@
 	$(call $(t)_ENV,$(i),1) \
-		LD_LIBRARY_PATH=/usr/lib64:$$$$LD_LIBRARY_PATH \
+		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/usr/lib64 \
 		/usr/bin/time -ao $$@ -f 'Baseline: %E ~ %Uu/%Sk (%P)' \
 		$(call $(t),$(i),1,$$@.tmp/base) 2>> $$@.tmp/base.err \
 		|| (echo "        | Baseline failed ($$$$?), something is very broken!" >> $$@.tmp/base.err; \
@@ -253,4 +246,4 @@ $(call errors,$(t),$(i),stable): $(t) $(i) $(GLOBALDEPS)
 	@echo '' >> $$@
 
 endef
-$(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call stable))))
+$(eval $(foreach i,$(ALLINPUTS),$(foreach t,$(TESTS),$(call stable))))
