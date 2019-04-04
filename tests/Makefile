@@ -91,7 +91,7 @@ LDFLAGS += -Wl,-rpath=$(INSTALL)/gcc/lib -Wl,-rpath=$(INSTALL)/gcc/lib64
 LDFLAGS += -L/projects/comp522/jma14/tbb -Wl,-rpath=/projects/comp522/jma14/tbb
 LDFLAGS += -ltbb_debug
 
-LDLPATH = $(INSTALL)/dyninst/lib:$(INSTALL)/elfutils/lib:$(INSTALL)/gcc/lib64:/projects/comp522/jma14/tbb/lib
+LDLPATH = $(INSTALL)/dyninst/lib:$(INSTALL)/elfutils/lib:/projects/comp522/jma14/tbb/lib
 
 GLOBALDEPS += $(INSTALL)/dyninst/lib/libsymtabAPI.so
 GLOBALDEPS += $(INSTALL)/dyninst/lib/libparseAPI.so
@@ -123,7 +123,7 @@ TESTS += hpc/hpcstruct-bin
 hpc/hpcstruct-bin:
 	@mkdir -p hpc
 	ln -s $(INSTALL)/hpctoolkit/libexec/hpctoolkit/hpcstruct-bin $@
-hpc/hpcstruct-bin_ENV = LD_LIBRARY_PATH=$(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs:$(INSTALL)/gcc/lib64:/projects/comp522/jma14/tbb/lib
+hpc/hpcstruct-bin_ENV = LD_LIBRARY_PATH=$(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs:/projects/comp522/jma14/tbb/lib
 hpc/hpcstruct-bin = ./$(0) -o $(3) -j$(2) --jobs-symtab $(2) $(1)
 
 ### Test output concatination rules
@@ -167,7 +167,9 @@ define valgrind
 ifeq (,$(findstring $(i),$(BIGINPUTS)))
 $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
 		$(t) $(i) $(GLOBALDEPS)
-	$(call $(t)_ENV,$(i),$(VTHREADS)) $(VAL) $(VFLAGS) \
+	$(call $(t)_ENV,$(i),$(VTHREADS)) \
+		LD_LIBRARY_PATH="$(INSTALL)/gcc/lib64:$$$$LD_LIBRARY_PATH" \
+		$(VAL) $(VFLAGS) \
 		$(VFLAGS_$(v)) $(VOUT_$(v)) \
 		$(call $(t),$(i),$(VTHREADS),/dev/null)
 else
@@ -206,7 +208,9 @@ define hpcrun
 $(call output,$(t),$(i),prof.pre): $(t) $(i) $(GLOBALDEPS)
 	@rm -rf $$@
 	./hpcrun -t -o $$@ bash -c \
-	'$(call $(t)_ENV,$(i),$(HTHREADS)) exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
+	'$(call $(t)_ENV,$(i),$(HTHREADS)) \
+		LD_LIBRARY_PATH=/usr/lib64:$$$$LD_LIBRARY_PATH \
+		exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
 
 $(call output,$(t),$(i),prof): $(call output,$(t),$(i),prof.pre) $(STRUCT)
 	@rm -rf $$@
@@ -219,6 +223,7 @@ $(eval $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
 
 define pass
 	$(call $(t)_ENV,$(i),$(2)) \
+		LD_LIBRARY_PATH=/usr/lib64:$$$$LD_LIBRARY_PATH \
 		/usr/bin/time -ao $$@ -f ' Pass $(1): %E ~ %Uu/%Sk (%P)' \
 		$(call $(t),$(i),$(2),$$@.tmp/pass.$(1)) 2>> $$@.tmp/pass.$(1).err \
 		|| (echo "        | Failed with exit code $$$$?!" >> $$@.tmp/pass.$(1).err; \
@@ -235,6 +240,7 @@ $(call errors,$(t),$(i),stable): $(t) $(i) $(GLOBALDEPS)
 	@mkdir $$@.tmp
 	@echo '### Command $(call $(t),$(i),N,O)' > $$@
 	$(call $(t)_ENV,$(i),1) \
+		LD_LIBRARY_PATH=/usr/lib64:$$$$LD_LIBRARY_PATH \
 		/usr/bin/time -ao $$@ -f 'Baseline: %E ~ %Uu/%Sk (%P)' \
 		$(call $(t),$(i),1,$$@.tmp/base) 2>> $$@.tmp/base.err \
 		|| (echo "        | Baseline failed ($$$$?), something is very broken!" >> $$@.tmp/base.err; \
