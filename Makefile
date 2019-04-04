@@ -20,6 +20,7 @@ dl:
 
 INST = $(shell pwd)/install
 XFLAGS = -O0 -g
+VFLAGS = -I$(INST)/valgrind/include -I$(INST)/.. -include valc++.h
 
 #----------------------------------------------------------------------------
 # dyninst test harness for detecting races caused by libdw in elfutils
@@ -103,7 +104,7 @@ gcc:
 	tar xJf download/gcc-6.4.0.tar.xz
 	mv gcc-6.4.0 gcc
 	cd gcc && ./contrib/download_prerequisites
-	cd gcc && CPPFLAGS='-g' ./configure \
+	cd gcc && CPPFLAGS='-g $(VFLAGS)' ./configure \
 		--prefix=$(INST)/gcc --disable-linux-futex --disable-multilib \
 		--disable-bootstrap --disable-libquadmath \
 		--disable-gcov --disable-libada --disable-libsanitizer \
@@ -150,6 +151,7 @@ hpctoolkit-build: dyninst-build
 			--with-xerces=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/xerces-c-3.2.2-jvn3zwe3y226fqxiyzstqahpb57szire \
 			--with-lzma=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/xz-5.2.4-42sbhepxxh3yowggil26r476nz7ixcog \
 			--with-zlib=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/zlib-1.2.11-l2f3fdpy5urpxsr4prw765g3veaux3og \
+			CFLAGS="$(VFLAGS)" \
 			LDFLAGS="-L$(INST)/gcc/lib64 -lgomp" \
 			--with-xed=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/intel-xed-2018.02.14-hk2unjcjkxmb4ykx7oxb3qnszrb2fxaw \
 			--with-perfmon=/projects/comp522/jma14/spack/opt/spack/linux-rhel6-x86_64/gcc-6.4.0/libpfm4-4.10.1-fs4zdgcohg7qovbsbiz22fs22gq5cjdr \
