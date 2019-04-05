@@ -11,10 +11,22 @@ GLOBALDEPS += system.supp toreport.supp
 
 ERRORKINDS=memcheck helgrind
 
+ifdef NONE
+ERRORKINDS=
+endif
+
 ifdef ALL
 CALLGRIND=1
 PROF=1
 STABLE=1
+endif
+
+ifdef MEMCHECK
+ERRORKINDS += memcheck
+endif
+
+ifdef HELGRIND
+ERRORS += helgrind
 endif
 
 ifdef DRD
@@ -202,7 +214,7 @@ $(call output,$(t),$(i),prof.pre): $(t) $(i) $(GLOBALDEPS)
 	@rm -rf $$@
 	./hpcrun -t -o $$@ bash -c \
 	'$(call $(t)_ENV,$(i),$(HTHREADS)) \
-		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/usr/lib64 \
+		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/opt/apps/software/Core/GCCcore/6.4.0/lib64 \
 		exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
 
 $(call output,$(t),$(i),prof): $(call output,$(t),$(i),prof.pre) $(STRUCT)
@@ -216,7 +228,7 @@ $(eval $(foreach i,$(ALLINPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
 
 define pass
 	$(call $(t)_ENV,$(i),$(2)) \
-		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/usr/lib64 \
+		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/opt/apps/software/Core/GCCcore/6.4.0/lib64 \
 		/usr/bin/time -ao $$@ -f ' Pass $(1): %E ~ %Uu/%Sk (%P)' \
 		$(call $(t),$(i),$(2),$$@.tmp/pass.$(1)) 2>> $$@.tmp/pass.$(1).err \
 		|| (echo "        | Failed with exit code $$$$?!" >> $$@.tmp/pass.$(1).err; \
@@ -233,7 +245,7 @@ $(call errors,$(t),$(i),stable): $(t) $(i) $(GLOBALDEPS)
 	@mkdir $$@.tmp
 	@echo '### Command $(call $(t),$(i),N,O)' > $$@
 	$(call $(t)_ENV,$(i),1) \
-		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/usr/lib64 \
+		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/opt/apps/software/Core/GCCcore/6.4.0/lib64 \
 		/usr/bin/time -ao $$@ -f 'Baseline: %E ~ %Uu/%Sk (%P)' \
 		$(call $(t),$(i),1,$$@.tmp/base) 2>> $$@.tmp/base.err \
 		|| (echo "        | Baseline failed ($$$$?), something is very broken!" >> $$@.tmp/base.err; \
