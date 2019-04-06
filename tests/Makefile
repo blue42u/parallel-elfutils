@@ -3,8 +3,14 @@ INSTALL=$(WORK)/install
 SHELL=/bin/bash
 
 VFLAGS = --suppressions=system.supp --suppressions=toreport.supp
-VFLAGS += --fair-sched=yes --soname-synonyms=somalloc='*tbbmalloc*'
+VFLAGS +=  --soname-synonyms=somalloc='*tbbmalloc*'
 GLOBALDEPS += system.supp toreport.supp
+
+ifdef UNFAIR
+VFLAGS += --fair-sched=no
+else
+VFLAGS += --fair-sched=yes
+endif
 
 .PHONY: all view run
 
@@ -119,14 +125,12 @@ test1/main_ENV = OMP_NUM_THREADS=$(2) LD_LIBRARY_PATH=$(LDLPATH)
 test1/main = ./$(0) $(1) > $(3)
 
 TESTS += unstrip/unstrip
-LDLIBS = -lelf -lparseAPI -lsymtabAPI -ldynElf -ldynDwarf -linstructionAPI -lcommon
-FILES = unstrip.C fingerprint.C database.C semanticDescriptor.C types.C callback.C util.C
-unstrip/unstrip: $(foreach f,$(FILES),$(WORK)/dyninst/examples/unstrip.dir/$(f))
-	@mkdir -p unstrip
-	ln -sf $(WORK)/dyninst/examples/unstrip.dir/ddb.db unstrip/ddb.db
-	ln -sf $(WORK)/dyninst/examples/unstrip.dir/params.db unstrip/params.db
-	ln -sf $(WORK)/dyninst/examples/unstrip.dir/unistd.db unstrip/unistd.db
-	c++ $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+unstrip/unstrip:
+	@mkdir -p unstripd
+	ln -s $(INSTALL)/dyninst/bin/ddb.db unstrip/ddb.db
+	ln -s $(INSTALL)/dyninst/bin/params.db unstrip/params.db
+	ln -s $(INSTALL)/dyninst/bin/unistd.db unstrip/unistd.db
+	ln -s $(INSTALL)/dyninst/bin/unstrip $@
 unstrip/unstrip_ENV = OMP_NUM_THREADS=$(2) LD_LIBRARY_PATH=$(LDLPATH)
 unstrip/unstrip = ./$(0) -f $(1) -o $(3)
 
