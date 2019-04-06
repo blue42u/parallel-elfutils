@@ -2,7 +2,8 @@ WORK=$(shell pwd)/..
 INSTALL=$(WORK)/install
 SHELL=/bin/bash
 
-VFLAGS = --suppressions=system.supp --suppressions=toreport.supp --fair-sched=yes
+VFLAGS = --suppressions=system.supp --suppressions=toreport.supp
+VFLAGS += --fair-sched=yes --soname-synonyms=somalloc='*tbbmalloc*'
 GLOBALDEPS += system.supp toreport.supp
 
 .PHONY: all view run

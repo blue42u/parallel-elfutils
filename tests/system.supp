@@ -1,69 +1,47 @@
 {
   libtbb
   Helgrind:Race
-  obj:*libtbb_debug.so.2
+  obj:*libtbb*
 }
 {
   libtbb
   drd:ConflictingAccess
-  obj:*libtbb_debug.so.2
+  obj:*libtbb*
 }
 
 {
-  tbb: scalable_aligned_malloc
+  libtbb (inlined)
   Helgrind:Race
   ...
-  fun:scalable_*malloc
+  fun:*tbb*8internal*
 }
 {
-  tbb: scalable_aligned_malloc
+  libtbb (inlined)
   drd:ConflictingAccess
   ...
-  fun:scalable_*malloc
+  fun:*tbb*8internal*
 }
 
 {
-  libgomp
-  Helgrind:Race
-  fun:gomp_*
-}
-{
-  libgomp
-  drd:ConflictingAccess
-  fun:gomp_*
-}
-
-{
-  libgomp
-  Helgrind:Race
-  fun:GOMP_*
-}
-{
-  libgomp
-  drd:ConflictingAccess
-  fun:GOMP_*
-}
-
-{
-  libgomp
-  Helgrind:Race
-  fun:priority_queue_*
-}
-{
-  libgomp
-  drd:ConflictingAccess
-  fun:priority_queue_*
-}
-
-{
-  tbb::concurrent_hash_map
+  libtbb (inlined)
   Helgrind:Race
   ...
-  fun:*tbb10interface519concurrent_hash_map*
+  fun:*tbb10interface5*
 }
 {
-  tbb::concurrent_hash_map
+  libtbb (inlined)
   drd:ConflictingAccess
   ...
-  fun:*tbb10interface519concurrent_hash_map*
+  fun:*tbb10interface5*
+}
+
+{
+  libgomp
+  Helgrind:Race
+  obj:*libgomp.so*
+}
+{
+  libgomp
+  drd:ConflictingAccess
+  obj:*libgomp.so*
 }
