@@ -213,7 +213,7 @@ HTHREADS = $(shell grep -c ^processor /proc/cpuinfo)
 define hpcrun
 $(call output,$(t),$(i),prof.pre): $(t) $(i) $(GLOBALDEPS)
 	@rm -rf $$@
-	./hpcrun -t -o $$@ bash -c \
+	./hpcrun -e REALTIME@5000 -t -o $$@ bash -c \
 	'$(call $(t)_ENV,$(i),$(HTHREADS)) \
 		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/opt/apps/software/Core/GCCcore/6.4.0/lib64 \
 		exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
