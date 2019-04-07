@@ -1,15 +1,4 @@
 {
-  HPCToolkit's own errors
-  Helgrind:Race
-  obj:*hpcstruct-bin
-}
-{
-  HPCToolkit's own errors
-  drd:ConflictingAccess
-  obj:*hpcstruct-bin
-}
-
-{
    ParseAPI lock order violation (on Frame creation)
    Helgrind:LockOrder
    fun:mutex_lock_WRK
