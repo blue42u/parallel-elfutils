@@ -30,6 +30,7 @@ check: dyninst-build  hpctoolkit-build valgrind
 	$(MAKE) -j12 -C tests
 
 batch: dyninst-build  hpctoolkit-build valgrind
+	sbatch cl_drd.sh
 	sbatch cl_val.sh
 	sbatch cl_perf.sh
 
