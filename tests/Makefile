@@ -2,16 +2,6 @@ WORK=$(shell pwd)/..
 INSTALL=$(WORK)/install
 SHELL=/bin/bash
 
-VFLAGS = --suppressions=system.supp --suppressions=toreport.supp
-VFLAGS +=  --soname-synonyms=somalloc='*tbbmalloc*'
-GLOBALDEPS += system.supp toreport.supp
-
-ifdef UNFAIR
-VFLAGS += --fair-sched=no
-else
-VFLAGS += --fair-sched=yes
-endif
-
 .PHONY: all view run
 
 ### Error report control variables
@@ -165,12 +155,15 @@ output.%.txz: \
 VAL=$(INSTALL)/valgrind/bin/valgrind
 VALTOOLS=memcheck helgrind drd callgrind cachegrind massif
 
+VFLAGS = --suppressions=system.supp --suppressions=toreport.supp
 VFLAGS += --tool=$(v) --log-file=$(call errors,$(t),$(i),$(v))
+VFLAGS +=  --soname-synonyms=somalloc='*tbbmalloc*'
 VOUT_callgrind = --callgrind-out-file=$(call output,$(t),$(i),$(v))
 
 VFLAGS_callgrind = --collect-jumps=yes --collect-bus=yes --cache-sim=yes
 VFLAGS_callgrind += --simulate-wb=yes --cacheuse=yes --simulate-hwpref=yes
 VFLAGS_memcheck = --leak-check=full --track-origins=yes
+VFLAGS_drd += --check-stack-var=yes
 
 ifdef SHOWLEAKS
 #VFLAGS_memcheck += --show-leak-kinds=all
@@ -178,11 +171,21 @@ else
 VFLAGS_memcheck += --show-leak-kinds=none
 endif
 
+ifdef UNFAIR
+VFLAGS += --fair-sched=no
+else
+VFLAGS += --fair-sched=yes
+endif
+
+ifdef HELFAST
+VFLAGS_helgrind += --history-level=none
+endif
+
 VTHREADS = 30
 
 define valgrind
 $(call errors,$(t),$(i),$(v)) $(if VOUT_$(v),$(call output,$(t),$(i),$(v))): \
-		$(t) $(i) $(GLOBALDEPS)
+		$(t) $(i) system.supp toreport.supp $(GLOBALDEPS)
 	-$(call $(t)_ENV,$(i),$(VTHREADS)) \
 		LD_LIBRARY_PATH="$$$$LD_LIBRARY_PATH:$(INSTALL)/gcc/lib64" \
 		$(VAL) $(VFLAGS) \
