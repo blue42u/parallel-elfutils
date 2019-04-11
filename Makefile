@@ -29,6 +29,9 @@ VFLAGS = -I$(INST)/valgrind/include -I$(INST)/.. -include valc++.h
 check: dyninst-build  hpctoolkit-build valgrind
 	$(MAKE) -j12 -C tests
 
+view:
+	$(MAKE) -C tests view
+
 batch: dyninst-build  hpctoolkit-build valgrind
 	sbatch cl_drd.sh
 	sbatch cl_val.sh

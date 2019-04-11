@@ -2,7 +2,7 @@ WORK=$(shell pwd)/..
 INSTALL=$(WORK)/install
 SHELL=/bin/bash
 
-.PHONY: all view run
+.PHONY: all vrun view run
 
 ### Error report control variables
 
@@ -44,7 +44,7 @@ ERRORKINDS += stable
 endif
 
 # The top-level target is to view the logs
-all: view
+all: vrun
 
 ### Individual input data rules
 SMALLINPUTS :=
@@ -142,8 +142,15 @@ errorfiles = $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call errors,$(t),$(i),
 
 run: $(ERRORFILES) $(OUTPUTFILES)
 
-view: $(ERRORFILES) $(OUTPUTFILES)
-	less -Sf $(foreach x,$(ERRORKINDS), <(cat $(call errorfiles,$(x)) ) )
+view:
+	@less -Sf $(foreach x,$(ERRORKINDS), <( cat \
+		$(foreach f,$(call errorfiles,$(x)), `[ -e $(f) ] && echo $(f)` ) \
+	))
+
+vrun: run
+	@less -Sf $(foreach x,$(ERRORKINDS), <( cat \
+		$(foreach f,$(call errorfiles,$(x)), `[ -e $(f) ] && echo $(f)` ) \
+	))
 
 output.%.txz: \
 	$(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call output,$(t),$(i),%)))
@@ -215,12 +222,12 @@ $(eval $(foreach f,$(addprefix $(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs/, \
 	libdynElf.so.10.0.0 libcommon.so.10.0.0 \
 ),$(call hpcstruct)))
 
-HTHREADS = $(shell grep -c ^processor /proc/cpuinfo)
+HTHREADS = 24
 
 define hpcrun
 $(call output,$(t),$(i),prof.pre): $(t) $(i) $(GLOBALDEPS)
 	@rm -rf $$@
-	./hpcrun -e REALTIME@5000 -t -o $$@ bash -c \
+	./hpcrun -e REALTIME@1000 -t -o $$@ bash -c \
 	'$(call $(t)_ENV,$(i),$(HTHREADS)) \
 		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/opt/apps/software/Core/GCCcore/6.4.0/lib64 \
 		exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
