@@ -116,7 +116,7 @@ test1/main = ./$(0) $(1) > $(3)
 
 TESTS += unstrip/unstrip
 unstrip/unstrip:
-	@mkdir -p unstripd
+	@mkdir -p unstrip
 	ln -s $(INSTALL)/dyninst/bin/ddb.db unstrip/ddb.db
 	ln -s $(INSTALL)/dyninst/bin/params.db unstrip/params.db
 	ln -s $(INSTALL)/dyninst/bin/unistd.db unstrip/unistd.db
