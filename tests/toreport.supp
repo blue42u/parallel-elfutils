@@ -8,3 +8,10 @@
    fun:_ZN5boost10lock_guardIN7Dyninst8ParseAPI9ParseDataEEC1ERS3_
    fun:_ZN7Dyninst8ParseAPI17StandardParseData19createAndRecordFuncEPNS0_10CodeRegionEmNS0_10FuncSourceE
 }
+
+{
+   InstructionAPI uninitialized value (in callback)
+   Memcheck:Cond
+   ...
+   fun:_ZN13InstrCallback14instruction_cbEPN7Dyninst8ParseAPI8FunctionEPNS1_5BlockEmPNS1_13ParseCallback12insn_detailsE
+}
