@@ -129,6 +129,7 @@ elfutils-build: dl
 			CFLAGS="$(XFLAGS)" \
 			INSTALL="$(shell which install) -C"; fi
 	$(MAKE) -j12 -C build/elfutils install
+	install -C elfutils/libelf/elf.h install/elfutils/include
 
 #----------------------------------------------------------------------------
 # hpctookit
