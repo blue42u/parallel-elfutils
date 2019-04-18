@@ -32,10 +32,16 @@ check: dyninst-build  hpctoolkit-build valgrind
 view:
 	$(MAKE) -C tests view
 
-batch: dyninst-build  hpctoolkit-build valgrind
+batchdrd: dyninst-build  hpctoolkit-build valgrind
 	sbatch cl_drd.sh
+
+batchval: dyninst-build  hpctoolkit-build valgrind
 	sbatch cl_val.sh
+
+batchperf: dyninst-build  hpctoolkit-build valgrind
 	sbatch cl_perf.sh
+
+batch: batchdrd batchval batchperf
 
 #----------------------------------------------------------------------------
 # dyninst

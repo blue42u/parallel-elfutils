@@ -3,6 +3,8 @@ INSTALL=$(WORK)/install
 SHELL=/bin/bash
 
 .PHONY: all vrun view run
+.SECONDARY:
+.DELETE_ON_ERROR:
 
 ### Error report control variables
 
@@ -222,19 +224,23 @@ $(eval $(foreach f,$(addprefix $(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs/, \
 	libdynElf.so.10.0.0 libcommon.so.10.0.0 \
 ),$(call hpcstruct)))
 
-HTHREADS = 24
+HTHREADS = $(shell nproc)
 
 define hpcrun
-$(call output,$(t),$(i),prof.pre): $(t) $(i) $(GLOBALDEPS)
+$(call output,$(t),$(i),prof.pre.%): $(t) $(i) $(GLOBALDEPS)
 	@rm -rf $$@
 	./hpcrun -e REALTIME@1000 -t -o $$@ bash -c \
-	'$(call $(t)_ENV,$(i),$(HTHREADS)) \
+	'$(call $(t)_ENV,$(i),$$*) \
 		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/opt/apps/software/Core/GCCcore/6.4.0/lib64 \
-		exec $(call $(t),$(i),$(HTHREADS),/dev/null)'
+		exec $(call $(t),$(i),$$*,/dev/null)'
 
-$(call output,$(t),$(i),prof): $(call output,$(t),$(i),prof.pre) $(STRUCT)
+$(call output,$(t),$(i),prof.%): $(call output,$(t),$(i),prof.pre.%) $(STRUCT)
 	@rm -rf $$@
 	./hpcprof -o $$@ $(SS) -I $(WORK)/dyninst/+ -I $(WORK)/elfutils/+ $$<
+
+$(call output,$(t),$(i),prof): $(call output,$(t),$(i),prof.$(HTHREADS))
+	@rm -rf $$@
+	cp -r $$^ $$@
 
 endef
 $(eval $(foreach i,$(ALLINPUTS),$(foreach t,$(TESTS),$(call hpcrun))))
