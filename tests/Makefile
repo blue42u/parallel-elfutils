@@ -2,7 +2,7 @@ WORK=$(shell pwd)/..
 INSTALL=$(WORK)/install
 SHELL=/bin/bash
 
-.PHONY: all vrun view run
+.PHONY: all vrun view run prep
 .SECONDARY:
 .DELETE_ON_ERROR:
 
@@ -87,6 +87,7 @@ endif
 endif
 
 ALLINPUTS := $(SMALLINPUTS) $(BIGINPUTS) $(BIGGERINPUTS)
+prep: $(ALLINPUTS)
 
 ### Individual test specifications
 
@@ -132,6 +133,8 @@ hpc/hpcstruct-bin:
 	ln -s $(INSTALL)/hpctoolkit/libexec/hpctoolkit/hpcstruct-bin $@
 hpc/hpcstruct-bin_ENV = LD_LIBRARY_PATH=$(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs:/projects/comp522/jma14/tbb/lib
 hpc/hpcstruct-bin = ./$(0) -o $(3) -j$(2) --jobs-symtab $(2) $(1)
+
+prep: $(TESTS)
 
 ### Test output presentation and composition rules
 
@@ -223,6 +226,7 @@ $(eval $(foreach f,$(addprefix $(INSTALL)/hpctoolkit/lib/hpctoolkit/ext-libs/, \
 	libparseAPI.so.10.0.0 libinstructionAPI.so.10.0.0 libsymtabAPI.so.10.0.0 \
 	libdynElf.so.10.0.0 libcommon.so.10.0.0 \
 ),$(call hpcstruct)))
+prep: $(STRUCT)
 
 HTHREADS = $(shell nproc)
 
