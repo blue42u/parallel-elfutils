@@ -111,7 +111,7 @@ GLOBALDEPS += $(INSTALL)/dyninst/lib/libcommon.so
 
 TESTS += test1/main
 LDLIBS = -lsymtabAPI -lparseAPI -linstructionAPI
-test1/main: test1/main.cpp 
+test1/main: test1/main.cpp $(GLOBALDEPS)
 	cc $(CFLAGS) -std=c++11 -fopenmp -o $@ $^ $(LDFLAGS) $(LDLIBS)
 test1/main_ENV = OMP_NUM_THREADS=$(2) LD_LIBRARY_PATH=$(LDLPATH)
 test1/main = ./$(0) $(1) > $(3)
