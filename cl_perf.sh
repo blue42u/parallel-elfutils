@@ -4,4 +4,4 @@
 #SBATCH -N 1 -n 1
 #SBATCH -o cl_perf.out
 
-make -C tests run NONE=1 PROF=1 STABLE=1 BIGGER=1
+make -C tests run NONE=1 STABLE=1 BIGGER=1

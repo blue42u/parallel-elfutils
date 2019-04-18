@@ -41,7 +41,10 @@ batchval: dyninst-build  hpctoolkit-build valgrind
 batchperf: dyninst-build  hpctoolkit-build valgrind
 	sbatch cl_perf.sh
 
-batch: batchdrd batchval batchperf
+batchprofs: dyninst-build  hpctoolkit-build valgrind
+	sbatch cl_profs.sh $(VERSION)
+
+batch: batchdrd batchval batchperf batchprofs
 
 #----------------------------------------------------------------------------
 # dyninst
