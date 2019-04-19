@@ -36,6 +36,19 @@
 }
 
 {
+  libtbb (inlined)
+  Helgrind:Race
+  ...
+  fun:*tbb*concurrent*
+}
+{
+  libtbb (inlined)
+  drd:ConflictingAccess
+  ...
+  fun:*tbb*concurrent*
+}
+
+{
   libgomp
   Helgrind:Race
   obj:*libgomp.so*
@@ -43,5 +56,20 @@
 {
   libgomp
   drd:ConflictingAccess
+  obj:*libgomp.so*
+}
+
+{
+  libgomp
+  Helgrind:Race
+  ...
+  fun:pthread_mutex_destroy
+  obj:*libgomp.so*
+}
+{
+  libgomp
+  drd:ConflictingAccess
+  ...
+  fun:pthread_mutex_destroy
   obj:*libgomp.so*
 }
