@@ -62,20 +62,15 @@ biginputs/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
 	@mkdir -p biginputs
 	ln -s $< $@
 
-#BIGINPUTS += stripped/libasm.so
-stripped/libasm.so: $(INSTALL)/elfutils/lib/libasm-0.175.so
-	@mkdir -p stripped
-	objcopy -S $< $@
+BIGINPUTS += biginputs/libInst.so
+biginputs/libInst.so: $(INSTALL)/dyninst/lib/libInst.so
+	@mkdir -p biginputs
+	ln -s $< $@
 
 BIGGERINPUTS += biginputs/libdyninstAPI.so
 biginputs/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
 	@mkdir -p biginputs
 	ln -s $< $@
-
-#BIGGERINPUTS += stripped/libdyninstAPI.so
-stripped/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
-	@mkdir -p stripped
-	objcopy -S $< $@
 
 INPUTS := $(SMALLINPUTS)
 ifdef BIG
