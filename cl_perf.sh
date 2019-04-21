@@ -11,6 +11,7 @@ else
 RUN="$1"
 fi
 
+rm -f profresults/$RUN/run.*.lua
 mkdir -p profresults/$RUN
 
 for rep in 1 2 3 4 5; do
@@ -20,7 +21,10 @@ echo "----------------"
 rm -rf tests/$TEST.prof.*
 for threads in 1 `nproc`; do
 
-make -C tests $TEST.prof.$threads
+while ! make -C tests $TEST.prof.$threads
+do rm -rf tests/$TEST.prof.$threads*
+done
+
 cd profresults
 lua hpcdump.lua ../tests/$TEST.prof.$threads > $RUN/run.$threads.$rep.lua
 cd ..

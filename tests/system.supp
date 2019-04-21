@@ -73,3 +73,14 @@
   fun:pthread_mutex_destroy
   obj:*libgomp.so*
 }
+
+{
+  boost (thread_detail)
+  Helgrind:Race
+  fun:*5boost13thread_detail*
+}
+{
+  boost (thread_detail)
+  drd:ConflictingAccess
+  fun:*5boost13thread_detail*
+}

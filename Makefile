@@ -19,7 +19,7 @@ dl:
 #----------------------------------------------------------------------------
 
 INST = $(shell pwd)/install
-XFLAGS = -O0 -g
+XFLAGS = -O3 -g
 VFLAGS = -I$(INST)/valgrind/include -I$(INST)/.. -include valc++.h
 
 #----------------------------------------------------------------------------
@@ -63,7 +63,7 @@ dyninst-build: dl boost gcc elfutils-build
 		-DLIBDWARF_INCLUDE_DIR=$(INST)/elfutils/include \
 		-DLIBDWARF_LIBRARIES=$(INST)/elfutils/lib/libdw.so \
 		-DIBERTY_LIBRARIES=$(INST)/gcc/lib64/libiberty.a \
-		-DCMAKE_BUILD_TYPE=Debug \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		../../dyninst; fi
 	$(MAKE) -j12 -C build/dyninst install
 
