@@ -19,10 +19,10 @@ echo "----------------"
 echo "REP $rep"
 echo "----------------"
 rm -rf tests/$TEST.prof.*
-for threads in 1 `nproc`; do
+for threads in 1 2 4 8 16; do
 
 while ! make -C tests $TEST.prof.$threads
-do rm -rf tests/$TEST.prof.$threads*
+do rm -rf tests/$TEST.prof.*
 done
 
 cd profresults
