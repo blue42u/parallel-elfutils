@@ -15,9 +15,10 @@ ERRORKINDS=
 endif
 
 ifdef ALL
-CALLGRIND=1
+DRD=1
 PROF=1
 STABLE=1
+BIGGER=1
 endif
 
 ifdef MEMCHECK
@@ -39,10 +40,12 @@ endif
 
 ifdef PROF
 OUTPUTFILES += output.prof.txz
+.NOTPARALLEL:
 endif
 
 ifdef STABLE
 ERRORKINDS += stable
+.NOTPARALLEL:
 endif
 
 # The top-level target is to view the logs
