@@ -40,12 +40,16 @@ endif
 
 ifdef PROF
 OUTPUTFILES += output.prof.txz
+ifndef PREP
 .NOTPARALLEL:
+endif
 endif
 
 ifdef STABLE
 ERRORKINDS += stable
+ifndef PREP
 .NOTPARALLEL:
+endif
 endif
 
 # The top-level target is to view the logs
@@ -143,7 +147,14 @@ output = $(dir $(1))output.$(notdir $(1)).$(subst /,_,$(2)).$(3)
 ERRORFILES := $(foreach x,$(ERRORKINDS),$(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call errors,$(t),$(i),$(x)))))
 errorfiles = $(foreach i,$(INPUTS),$(foreach t,$(TESTS),$(call errors,$(t),$(i),$(1))))
 
-run: $(ERRORFILES) $(OUTPUTFILES)
+ifdef PROF
+PRERUN = subprep
+.PHONY: subprep
+subprep:
+	$(MAKE) prep PREP=1
+endif
+
+run: $(PRERUN) $(ERRORFILES) $(OUTPUTFILES)
 
 view:
 	@less -Sf $(foreach x,$(ERRORKINDS), <( cat \
@@ -231,7 +242,7 @@ HTHREADS = $(shell nproc)
 define hpcrun
 $(call output,$(t),$(i),prof.pre.%): $(t) $(i) $(GLOBALDEPS)
 	@rm -rf $$@
-	./hpcrun -e REALTIME@1000 -t -o $$@ bash -c \
+	./hpcrun -e REALTIME@100 -t -o $$@ bash -c \
 	'$(call $(t)_ENV,$(i),$$*) \
 		LD_LIBRARY_PATH=$$$$LD_LIBRARY_PATH:/opt/apps/software/Core/GCCcore/6.4.0/lib64 \
 		exec $(call $(t),$(i),$$*,/dev/null)'
