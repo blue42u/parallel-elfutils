@@ -159,11 +159,13 @@ run: $(PRERUN) $(ERRORFILES) $(OUTPUTFILES)
 view:
 	@less -Sf $(foreach x,$(ERRORKINDS), <( cat \
 		$(foreach f,$(call errorfiles,$(x)), `[ -e $(f) ] && echo $(f)` ) \
+		/dev/null \
 	))
 
 vrun: run
 	@less -Sf $(foreach x,$(ERRORKINDS), <( cat \
 		$(foreach f,$(call errorfiles,$(x)), `[ -e $(f) ] && echo $(f)` ) \
+		/dev/null \
 	))
 
 output.%.txz: \

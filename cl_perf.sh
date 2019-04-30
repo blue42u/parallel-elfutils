@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --exclusive
-#SBATCH --time=4:00:00
+#SBATCH --time=6:00:00
 #SBATCH -N 1 -n 1 -c 16
 #SBATCH -o cl_perf.out
 
