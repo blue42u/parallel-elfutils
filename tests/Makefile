@@ -79,6 +79,11 @@ biginputs/libdyninstAPI.so: $(INSTALL)/dyninst/lib/libdyninstAPI.so
 	@mkdir -p biginputs
 	ln -s $< $@
 
+BIGGERINPUTS += biginputs/hpcstruct-bin
+biginputs/hpcstruct-bin: $(INSTALL)/hpctoolkit/libexec/hpctoolkit/hpcstruct-bin
+	@mkdir -p biginputs
+	ln -s $< $@
+
 INPUTS := $(SMALLINPUTS)
 ifdef BIG
 INPUTS += $(BIGINPUTS)
