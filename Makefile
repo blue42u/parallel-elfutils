@@ -54,18 +54,17 @@ dyninst-build: dl boost gcc elfutils-build
 	@mkdir -p build/dyninst install/dyninst
 	@cd build/dyninst && if [ ! -e Makefile ]; then cmake \
 		-DCMAKE_CXX_FLAGS="$(XFLAGS)" -DCMAKE_C_FLAGS="$(XFLAGS)" \
-		-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$(INST)/boost -DBoost_NO_SYSTEM_PATHS=ON \
-		-DBoost_INCLUDE_DIR=$(INST)/boost/include -DBoost_LIBRARY_DIR=$(INST)/boost/lib \
 		-DCMAKE_INSTALL_PREFIX=$(INST)/dyninst \
 		-DCMAKE_CXX_FLAGS="-DENABLE_VG_ANNOTATIONS" \
-		-DLIBELF_INCLUDE_DIR=$(INST)/elfutils/include \
-		-DLIBELF_LIBRARIES=$(INST)/elfutils/lib/libelf.so \
-		-DLIBDWARF_INCLUDE_DIR=$(INST)/elfutils/include \
-		-DLIBDWARF_LIBRARIES=$(INST)/elfutils/lib/libdw.so \
-		-DIBERTY_LIBRARIES=$(INST)/gcc/lib64/libiberty.a \
+		-DBoost_ROOT_DIR=$(INST)/boost \
+		-DElfUtils_ROOT_DIR=$(INST)/elfutils \
+		-DLibIberty_ROOT_DIR=$(INST)/gcc -DLibIberty_LIBRARYDIR=$(INST)/gcc/lib64 \
+		-DTBB_ROOT_DIR=/projects/comp522/jma14/tbb \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		../../dyninst; fi
 	$(MAKE) -j12 -C build/dyninst install
+
+#		-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$(INST)/boost -DBoost_NO_SYSTEM_PATHS=ON \
 
 #----------------------------------------------------------------------------
 # boost
